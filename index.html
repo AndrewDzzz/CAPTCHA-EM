@@ -1,844 +1,457 @@
-<!doctype html>
-<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Search-like Input Monitor + Risk Detector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login Monitor (Silent Stats + IME)</title>
   <style>
-    :root{
-      --bg:#0b0f17;
-      --border:rgba(255,255,255,.10);
-      --muted:rgba(255,255,255,.70);
-      --text:rgba(255,255,255,.92);
-      --text2:rgba(255,255,255,.86);
-      --accent:#60a5fa;
-      --good:#34d399;
-      --warn:#fbbf24;
-      --bad:#f87171;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      --r:18px;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      background:
-        radial-gradient(1200px 600px at 20% -10%, rgba(96,165,250,.25), transparent 60%),
-        radial-gradient(900px 500px at 80% 0%, rgba(52,211,153,.14), transparent 55%),
-        var(--bg);
-      color:var(--text);
-      font-family:var(--sans);
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,.1);
     }
-    .wrap{max-width:1100px; margin:0 auto; padding:22px}
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      margin-bottom:14px;
-    }
-    .brand{display:flex; align-items:center; gap:10px; user-select:none}
-    .dot{
-      width:12px;height:12px;border-radius:999px;
-      background: var(--accent);
-      box-shadow: 0 0 0 6px rgba(96,165,250,.14);
-    }
-    .brand b{font-size:14px; letter-spacing:.2px}
-    .brand span{font-size:12px; color:var(--muted)}
-    .pill{
-      display:inline-flex; align-items:center; gap:6px;
-      padding:7px 10px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.04);
-      font-size:12px; color:var(--text2);
-      user-select:none;
-      white-space:nowrap;
-    }
-    .pill b{font-variant-numeric: tabular-nums; color:var(--text)}
-    .pill.good{border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.12)}
-    .pill.warn{border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.12)}
-    .pill.bad {border-color: rgba(248,113,113,.40); background: rgba(248,113,113,.12)}
-
-    .hero{
-      display:flex; flex-direction:column; align-items:center;
-      padding:34px 10px 18px; text-align:center;
-    }
-    .hero h1{margin:0; font-size:32px; letter-spacing:.2px}
-    .hero p{
-      margin:10px 0 0; font-size:13px; color:var(--muted);
-      max-width:780px; line-height:1.6;
-    }
-
-    .searchBox{
-      width:min(780px, 100%);
-      margin-top:18px;
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.14);
-      border-radius: 999px;
-      display:flex; align-items:center; gap:10px;
-      padding:10px 14px;
-      box-shadow: 0 18px 50px rgba(0,0,0,.30);
-    }
-    .mag{
-      width:18px;height:18px;border-radius:999px;
-      border:2px solid rgba(255,255,255,.55);
-      position:relative;
-      flex:0 0 auto;
-    }
-    .mag:after{
-      content:"";
-      position:absolute;
-      width:10px;height:2px;
-      background: rgba(255,255,255,.55);
-      right:-8px; bottom:-6px;
-      transform: rotate(40deg);
-      border-radius: 999px;
-    }
-    textarea{
-      flex:1 1 auto;
+    .input-group { margin-bottom: 18px; }
+    .input-group label { display:block; margin-bottom:8px; font-size:14px; }
+    .input-group input {
       width:100%;
-      min-height:22px;
-      max-height:120px;
-      resize:vertical;
-      border:none;
-      outline:none;
-      background: transparent;
-      color: var(--text);
-      font-size:16px;
-      line-height:1.45;
-      padding:4px 0;
-      caret-color: var(--accent);
+      padding:10px;
+      font-size:14px;
+      border:1px solid #ddd;
+      border-radius:4px;
     }
-    .btn{
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.05);
-      color:var(--text);
-      border-radius: 12px;
-      padding:10px 12px;
-      font-size:13px;
-      cursor:pointer;
-      transition: transform .06s ease, background .15s ease, border-color .15s ease;
-      user-select:none;
+    .btn {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
     }
-    .btn:hover{background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18)}
-    .btn:active{transform: translateY(1px)}
-    .btn.primary{border-color: rgba(96,165,250,.35); background: rgba(96,165,250,.16)}
-    .btn.danger{border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.14)}
-    .btn.small{padding:8px 10px; font-size:12px; border-radius: 10px}
-    .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center}
-    .row.left{justify-content:flex-start}
-    .spacer{flex:1}
+    .btn:hover { background-color:#45a049; }
 
-    .below{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:14px;
-      margin-top:18px;
-      align-items:start;
+    .stats {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid #e6e6e6;
+      border-radius: 6px;
+      background: #fafafa;
+      font-size: 13px;
+      line-height: 1.6;
     }
-    @media (max-width: 980px){
-      .below{grid-template-columns:1fr}
-    }
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid var(--border);
-      border-radius: var(--r);
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-      overflow:hidden;
-    }
-    .card .hd{
-      padding:14px 14px 10px;
-      border-bottom: 1px solid var(--border);
-      display:flex; justify-content:space-between; align-items:center; gap:10px;
-    }
-    .card .hd .title{font-weight:700; font-size:14px}
-    .card .hd .hint{color:var(--muted); font-size:12px}
-    .card .bd{padding:14px}
+    .stats h3 { margin:0 0 8px; font-size: 14px; }
 
-    .panel{
-      background: rgba(255,255,255,.03);
-      border:1px solid var(--border);
-      border-radius: 14px;
-      padding:12px;
-    }
-    .panel .h{font-weight:700; font-size:13px; margin-bottom:8px}
-    .panel .p{color:var(--muted); font-size:12px; margin:0 0 6px; line-height:1.6}
-
-    pre{
-      margin:0;
-      padding:12px;
-      min-height:360px;
-      max-height:520px;
-      overflow:auto;
-      background: rgba(0,0,0,.25);
-      border:1px solid var(--border);
-      border-radius: 14px;
-      font-family: var(--mono);
-      font-size:12px;
-      line-height:1.45;
-      white-space:pre-wrap;
-      word-break:break-word;
-      color: rgba(255,255,255,.88);
+    .kv { display:flex; justify-content:space-between; gap:12px; }
+    .kv b {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
 
-    input[type="file"]{display:none}
-    label.fileBtn{
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px dashed rgba(255,255,255,.20);
-      background: rgba(255,255,255,.03);
-      color:var(--text);
-      border-radius: 12px;
-      padding:10px 12px;
-      font-size:13px;
-      cursor:pointer;
-      user-select:none;
+    .badge {
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      background: #fff;
+      margin-left: 6px;
     }
-    label.fileBtn:hover{background: rgba(255,255,255,.05)}
-    .mono{font-family:var(--mono)}
-    footer{
-      margin:16px 0 0;
-      color:rgba(255,255,255,.55);
-      font-size:12px;
-      text-align:center;
+    .ok { border-color: rgba(76,175,80,.35); background: rgba(76,175,80,.08); }
+    .warn { border-color: rgba(255,193,7,.5); background: rgba(255,193,7,.12); }
+    .bad { border-color: rgba(244,67,54,.45); background: rgba(244,67,54,.10); }
+
+    .log {
+      margin-top: 14px;
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 260px;
+      overflow-y: auto;
     }
+    .btn-row { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
+    .btn-small { width:auto; padding:8px 10px; font-size: 13px; cursor:pointer; }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
+  <div class="container">
+    <h2>Login</h2>
 
-    <div class="topbar">
-      <div class="brand">
-        <span class="dot"></span>
-        <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.1">
-          <b>Search Monitor</b>
-          <span>typing events • risk scoring • export/import</span>
-        </div>
-      </div>
-      <span id="pillStatus" class="pill">状态：就绪</span>
-    </div>
-
-    <div class="hero">
-      <h1>像搜索引擎一样输入</h1>
-      <p>
-        监控打字事件（keydown / beforeinput / input / composition / paste 等），并实时计算风险。
-        高危规则：<b>中文出现但缺少 IME 拼音合成轨迹（composition）</b> 会强制抬升风险。
-        Paste 不会“单次就高危”，而是随次数递增。
-      </p>
-
-      <div class="searchBox" role="search">
-        <span class="mag" aria-hidden="true"></span>
-        <textarea id="ta" rows="1" placeholder="在这里输入要“搜索”的内容…（例如：Hello / 你好啊 / 粘贴一段大写）"></textarea>
-        <button id="btnSearch" class="btn primary" title="这里只做 UI，不会真正联网搜索">搜索</button>
+    <form id="loginForm">
+      <div class="input-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" autocomplete="username" />
       </div>
 
-      <div class="row" style="margin-top:14px">
-        <button id="btnAutoHello" class="btn">写入“你好”(程序)</button>
-        <button id="btnClear" class="btn danger">清空</button>
-        <button id="btnResetLog" class="btn">清日志(不清数据)</button>
-        <button id="btnExport" class="btn primary">导出 JSON</button>
-
-        <span class="pill" style="margin-left:6px">
-          <input id="toggleCaptureContent" type="checkbox" />
-          <label for="toggleCaptureContent" style="cursor:pointer">导出包含全文 value</label>
-        </span>
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" />
       </div>
+
+      <button type="submit" class="btn" id="loginButton">Login</button>
+    </form>
+
+    <!-- Stats Panel (English) -->
+    <div class="stats" id="statsPanel">
+      <h3>
+        Statistics
+        <span class="badge" id="badgePaste">paste: 0</span>
+      </h3>
+
+      <div class="kv"><span>Username focus → Password interaction</span><b id="s_u2p">-</b></div>
+      <div class="kv"><span>Password interaction → Login click</span><b id="s_p2l">-</b></div>
+
+      <div class="kv"><span>Paste count == 2</span><b id="s_paste_eq2">false</b></div>
+      <div class="kv"><span>Paste count &gt; 2</span><b id="s_paste_gt2">false</b></div>
+
+      <div class="kv"><span>Password Shift key count</span><b id="s_shift_pw">0</b></div>
+      <div class="kv"><span>Password CapsLock count</span><b id="s_caps_pw">0</b></div>
+
+      <div class="kv"><span>Username IME composition count</span><b id="s_ime_user">0</b></div>
+      <div class="kv"><span>Password IME composition count</span><b id="s_ime_pass">0</b></div>
+
+      <!-- ✅ NEW: keydown counts -->
+      <div class="kv"><span>Username keydown count</span><b id="s_kd_user">0</b></div>
+      <div class="kv"><span>Password keydown count</span><b id="s_kd_pass">0</b></div>
     </div>
 
-    <div class="below">
+    <div class="log" id="log"></div>
 
-      <section class="card">
-        <div class="hd">
-          <div>
-            <div class="title">风险检测面板</div>
-            <div class="hint">三分类 + 风险规则（中文无拼音高危；paste 多次才高）</div>
-          </div>
-          <div class="row left">
-            <span class="pill mono" id="importInfo">未导入</span>
-          </div>
-        </div>
-
-        <div class="bd">
-          <div class="panel">
-            <div class="h">检测结果</div>
-            <div class="row left">
-              <span class="pill" id="pillLabel">标签：<b id="detLabel">-</b></span>
-              <span class="pill" id="pillRisk">风险分：<b id="detRisk">0</b>/100</span>
-            </div>
-            <div class="row left">
-              <span class="pill">Human(IME)：<b id="detIME">0</b></span>
-              <span class="pill">Human(直输)：<b id="detDirect">0</b></span>
-              <span class="pill">Paste(类脚本)：<b id="detPaste">0</b></span>
-            </div>
-            <div class="row left">
-              <span class="pill" style="max-width:100%; white-space:normal">解释：<b id="detWhy">-</b></span>
-            </div>
-          </div>
-
-          <div class="panel" style="margin-top:10px">
-            <div class="h">统计</div>
-            <div class="row left">
-              <span class="pill">len：<b id="statLen">0</b></span>
-              <span class="pill">edits：<b id="statEdits">0</b></span>
-              <span class="pill">paste：<b id="statPaste">0</b></span>
-              <span class="pill">backspace：<b id="statBksp">0</b></span>
-              <span class="pill">composition：<b id="statComp">0</b></span>
-              <span class="pill">sel：<b id="statSel">0-0</b></span>
-            </div>
-            <p class="p">统计基于当前会话事件计数。</p>
-          </div>
-
-          <div class="panel" style="margin-top:10px">
-            <div class="h">导入回放（只读）</div>
-            <p class="p">导入 JSON 后：不会覆盖当前会话；显示该文件 detection；可把导入 events 追加到右侧日志。</p>
-            <div class="row left">
-              <label class="fileBtn" for="fileImport">导入 JSON</label>
-              <input id="fileImport" type="file" accept="application/json" />
-              <button id="btnAppendImported" class="btn small">追加导入 events 到日志</button>
-              <button id="btnClearImported" class="btn small">清除导入信息</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="hd">
-          <div>
-            <div class="title">事件日志</div>
-            <div class="hint">简化显示（导出仍含原始字段）</div>
-          </div>
-          <div class="row left">
-            <button id="btnCopyLog" class="btn small">复制日志</button>
-          </div>
-        </div>
-        <div class="bd">
-          <pre id="log" class="mono"></pre>
-        </div>
-      </section>
-
+    <div class="btn-row">
+      <button class="btn-small" id="downloadLogBtn" type="button">Download Log</button>
+      <button class="btn-small" id="clearLogBtn" type="button">Clear Log</button>
     </div>
-
-    <footer>本页面不联网；事件采集在本地进行。建议 Chrome / Safari / Edge 测试。</footer>
   </div>
 
-  <script>
-    // ================== DOM ==================
-    const ta = document.getElementById("ta");
-    const logEl = document.getElementById("log");
-    const pillStatus = document.getElementById("pillStatus");
+<script>
+/* ===================== utils ===================== */
+function ts(){ return new Date().toISOString(); }
+function nowMs(){ return Date.now(); }
+function safeText(s, maxLen=200){
+  if (s == null) return "";
+  s = String(s);
+  return s.length > maxLen ? s.slice(0,maxLen) + "…(" + s.length + ")" : s;
+}
 
-    const toggleCaptureContent = document.getElementById("toggleCaptureContent");
+/* ===================== DOM ===================== */
+const usernameField = document.getElementById("username");
+const passwordField = document.getElementById("password");
+const loginButton   = document.getElementById("loginButton");
+const form          = document.getElementById("loginForm");
+const logEl         = document.getElementById("log");
+const downloadLogBtn= document.getElementById("downloadLogBtn");
+const clearLogBtn   = document.getElementById("clearLogBtn");
 
-    const statLen = document.getElementById("statLen");
-    const statEdits = document.getElementById("statEdits");
-    const statPaste = document.getElementById("statPaste");
-    const statBksp = document.getElementById("statBksp");
-    const statComp = document.getElementById("statComp");
-    const statSel = document.getElementById("statSel");
+const s_u2p = document.getElementById("s_u2p");
+const s_p2l = document.getElementById("s_p2l");
+const s_paste_eq2 = document.getElementById("s_paste_eq2");
+const s_paste_gt2 = document.getElementById("s_paste_gt2");
+const s_shift_pw  = document.getElementById("s_shift_pw");
+const s_caps_pw   = document.getElementById("s_caps_pw");
+const s_ime_user  = document.getElementById("s_ime_user");
+const s_ime_pass  = document.getElementById("s_ime_pass");
+const s_kd_user   = document.getElementById("s_kd_user");
+const s_kd_pass   = document.getElementById("s_kd_pass");
+const badgePaste  = document.getElementById("badgePaste");
 
-    const btnSearch = document.getElementById("btnSearch");
-    const btnAutoHello = document.getElementById("btnAutoHello");
-    const btnClear = document.getElementById("btnClear");
-    const btnExport = document.getElementById("btnExport");
-    const btnResetLog = document.getElementById("btnResetLog");
-    const btnCopyLog = document.getElementById("btnCopyLog");
+/* ===================== logs ===================== */
+const logs = [];
+function appendLogLine(line){
+  logEl.textContent += line + "\n";
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function logEvent(type, detail={}){
+  const entry = { t: ts(), t_ms: nowMs(), type, ...detail };
+  logs.push(entry);
+  appendLogLine(`${entry.t}  [${type}]  ${JSON.stringify(detail)}`);
+}
 
-    const pillLabel = document.getElementById("pillLabel");
-    const pillRisk = document.getElementById("pillRisk");
-    const detLabel = document.getElementById("detLabel");
-    const detRisk = document.getElementById("detRisk");
-    const detIME = document.getElementById("detIME");
-    const detDirect = document.getElementById("detDirect");
-    const detPasteScore = document.getElementById("detPaste");
-    const detWhy = document.getElementById("detWhy");
+/* ===================== stats state ===================== */
+// timing: username focus -> password interaction
+let tFocusUsernameMs = null;
+let tPasswordTouchMs = null;
 
-    const fileImport = document.getElementById("fileImport");
-    const importInfo = document.getElementById("importInfo");
-    const btnAppendImported = document.getElementById("btnAppendImported");
-    const btnClearImported = document.getElementById("btnClearImported");
+// timing: password interaction -> login click
+let tLoginClickMs = null;
 
-    // ================== 当前会话数据 ==================
-    const events = [];
-    let edits = 0, pastes = 0, backspaces = 0, compositions = 0;
+// paste
+let pasteCount = 0;
 
-    // 导入数据
-    let imported = null;
+// password shift/capslock
+let pwShiftCount = 0;
+let pwCapsCount = 0;
+let lastCapsState = null;
 
-    // ================== 状态（用于规则判断） ==================
-    let lastKeydown = { t: 0, key: "", shift: false, code: "" };
-    let lastCompositionAt = 0;
+// IME signals
+let imeUsernameCount = 0;
+let imePasswordCount = 0;
+let lastCompositionAtUsernameMs = null;
+let lastCompositionAtPasswordMs = null;
 
-    // ================== util ==================
-    function ts() { return new Date().toISOString(); }
-    function nowMs(){ return Date.now(); }
-    function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+// ✅ NEW: keydown counters
+let usernameKeydownCount = 0;
+let passwordKeydownCount = 0;
 
-    function safeText(s, maxLen = 120) {
-      if (s == null) return "";
-      s = String(s);
-      if (s.length > maxLen) return s.slice(0, maxLen) + "…(" + s.length + ")";
-      return s;
+/* ===================== helpers ===================== */
+function delta(a,b){
+  if (typeof a !== "number" || typeof b !== "number") return "-";
+  const d = b - a;
+  return (d >= 0 && Number.isFinite(d)) ? `${d} ms` : "-";
+}
+
+function snapshotStats(){
+  return {
+    usernameToPasswordMs:
+      (typeof tFocusUsernameMs === "number" && typeof tPasswordTouchMs === "number")
+        ? (tPasswordTouchMs - tFocusUsernameMs)
+        : null,
+    passwordToLoginMs:
+      (typeof tPasswordTouchMs === "number" && typeof tLoginClickMs === "number")
+        ? (tLoginClickMs - tPasswordTouchMs)
+        : null,
+    pasteCount,
+    pasteEq2: pasteCount === 2,
+    pasteGt2: pasteCount > 2,
+    passwordShiftCount: pwShiftCount,
+    passwordCapsLockCount: pwCapsCount,
+    usernameIMECompositionCount: imeUsernameCount,
+    passwordIMECompositionCount: imePasswordCount,
+    usernameKeydownCount,
+    passwordKeydownCount,
+    lastCompositionAtUsernameMs,
+    lastCompositionAtPasswordMs
+  };
+}
+
+// avoid flooding logs with stats_update
+let lastStatsSig = "";
+function updateStatsUIAndMaybeLog(){
+  s_u2p.textContent = delta(tFocusUsernameMs, tPasswordTouchMs);
+  s_p2l.textContent = delta(tPasswordTouchMs, tLoginClickMs);
+
+  s_paste_eq2.textContent = String(pasteCount === 2);
+  s_paste_gt2.textContent = String(pasteCount > 2);
+
+  s_shift_pw.textContent = String(pwShiftCount);
+  s_caps_pw.textContent  = String(pwCapsCount);
+
+  s_ime_user.textContent = String(imeUsernameCount);
+  s_ime_pass.textContent = String(imePasswordCount);
+
+  // ✅ NEW
+  s_kd_user.textContent = String(usernameKeydownCount);
+  s_kd_pass.textContent = String(passwordKeydownCount);
+
+  badgePaste.textContent = `paste: ${pasteCount}`;
+  badgePaste.classList.remove("ok","warn","bad");
+  if (pasteCount === 0) badgePaste.classList.add("ok");
+  else if (pasteCount <= 2) badgePaste.classList.add("warn");
+  else badgePaste.classList.add("bad");
+
+  const stats = snapshotStats();
+  const sig = JSON.stringify({
+    u2p: stats.usernameToPasswordMs,
+    p2l: stats.passwordToLoginMs,
+    pc: stats.pasteCount,
+    sh: stats.passwordShiftCount,
+    ca: stats.passwordCapsLockCount,
+    iu: stats.usernameIMECompositionCount,
+    ip: stats.passwordIMECompositionCount,
+    ku: stats.usernameKeydownCount,     // ✅ NEW
+    kp: stats.passwordKeydownCount      // ✅ NEW
+  });
+
+  if (sig !== lastStatsSig){
+    lastStatsSig = sig;
+    logEvent("stats_update", stats);
+  }
+}
+
+/* ===================== IME detectors ===================== */
+function bumpIME(field, via){
+  if (field === "username") {
+    imeUsernameCount++;
+    lastCompositionAtUsernameMs = nowMs();
+  } else {
+    imePasswordCount++;
+    lastCompositionAtPasswordMs = nowMs();
+  }
+  logEvent("ime_detected", { field, via });
+}
+
+function attachCompositionListeners(inputEl, field){
+  inputEl.addEventListener("compositionstart", (e) => {
+    bumpIME(field, "compositionstart");
+    logEvent("compositionstart", { field, data: safeText(e.data, 120) });
+    updateStatsUIAndMaybeLog();
+  });
+
+  inputEl.addEventListener("compositionupdate", (e) => {
+    if (field === "username") lastCompositionAtUsernameMs = nowMs();
+    else lastCompositionAtPasswordMs = nowMs();
+    logEvent("compositionupdate", { field, data: safeText(e.data, 120) });
+  });
+
+  inputEl.addEventListener("compositionend", (e) => {
+    if (field === "username") lastCompositionAtUsernameMs = nowMs();
+    else lastCompositionAtPasswordMs = nowMs();
+    logEvent("compositionend", { field, data: safeText(e.data, 120) });
+  });
+}
+
+function markIMEFromKeydown(field, e){
+  const maybeIME = (e.isComposing === true) || (e.keyCode === 229);
+  if (maybeIME){
+    logEvent("ime_hint", { field, via: "keydown", isComposing: !!e.isComposing, keyCode: e.keyCode });
+  }
+}
+
+/* ===================== core listeners ===================== */
+// username focus
+usernameField.addEventListener("focus", ()=>{
+  if (tFocusUsernameMs == null) tFocusUsernameMs = nowMs();
+  logEvent("focus", { field:"username" });
+  updateStatsUIAndMaybeLog();
+});
+usernameField.addEventListener("blur", ()=>logEvent("blur", { field:"username" }));
+
+// password touched (click/focus)
+function markPasswordTouched(trigger){
+  if (tPasswordTouchMs == null){
+    tPasswordTouchMs = nowMs();
+    logEvent("password_touched", { trigger });
+    updateStatsUIAndMaybeLog();
+  }
+}
+passwordField.addEventListener("pointerdown", ()=>markPasswordTouched("pointerdown"));
+passwordField.addEventListener("mousedown",   ()=>markPasswordTouched("mousedown"));
+passwordField.addEventListener("focus",       ()=>{ markPasswordTouched("focus"); logEvent("focus", { field:"password" }); });
+passwordField.addEventListener("blur",        ()=>logEvent("blur", { field:"password" }));
+
+// keydowns
+usernameField.addEventListener("keydown", (e)=>{
+  usernameKeydownCount++; // ✅ NEW
+  markIMEFromKeydown("username", e);
+  logEvent("keydown", { field:"username", key:e.key, code:e.code, shift:e.shiftKey });
+  updateStatsUIAndMaybeLog(); // optional: keep for UI refresh
+});
+
+passwordField.addEventListener("keydown", (e)=>{
+  passwordKeydownCount++; // ✅ NEW
+  markIMEFromKeydown("password", e);
+
+  if (e.key === "Shift") pwShiftCount++;
+  if (e.key === "CapsLock") pwCapsCount++;
+
+  // CapsLock state change heuristic
+  try{
+    const caps = !!(e.getModifierState && e.getModifierState("CapsLock"));
+    if (lastCapsState === null) lastCapsState = caps;
+    else if (caps !== lastCapsState){
+      pwCapsCount++;
+      lastCapsState = caps;
+      logEvent("capslock_state_change", { field:"password", caps });
     }
-
-    function getSelection() {
-      try { return { start: ta.selectionStart ?? 0, end: ta.selectionEnd ?? 0 }; }
-      catch { return { start: 0, end: 0 }; }
-    }
-
-    function setStatus(text){
-      pillStatus.textContent = "状态：" + text;
-    }
-
-    function appendLogLine(line){
-      logEl.textContent += line + "\n";
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function updateStats(){
-      statLen.textContent = ta.value.length;
-      statEdits.textContent = edits;
-      statPaste.textContent = pastes;
-      statBksp.textContent = backspaces;
-      statComp.textContent = compositions;
-      const sel = getSelection();
-      statSel.textContent = `${sel.start}-${sel.end}`;
-    }
-
-    function containsUpperAZ(str){ return /[A-Z]/.test(str || ""); }
-    function containsChinese(str){ return /[\u4E00-\u9FFF]/.test(str || ""); }
-
-    // ✅ paste 规则风险递增：少量 paste 基本不算高危，多了才升
-    function pasteEscalation(n){
-      if (n <= 0) return 0;
-      if (n === 1) return 4;                  // 1次：很低
-      if (n === 2) return 10;                 // 2次：开始可疑
-      if (n <= 4) return 10 + (n - 2) * 8;    // 3-4次：18, 26
-      return 26 + (n - 4) * 12;               // 5次+：38, 50, 62...
-    }
-
-    // ================== 事件记录（导出同构）==================
-    function logEvent(type, detail = {}) {
-      const sel = getSelection();
-      const entry = { t: ts(), type, ...detail, selection: sel, len: ta.value.length };
-      if (toggleCaptureContent.checked) entry.value = ta.value;
-
-      events.push(entry);
-
-      const pretty = `${entry.t}  [${type}]  ` + JSON.stringify({
-        ...detail,
-        selection: sel,
-        len: entry.len,
-        value: toggleCaptureContent.checked ? safeText(ta.value, 80) : undefined
-      });
-
-      appendLogLine(pretty);
-      updateStats();
-
-      const det = scoreDetection(events);
-      renderDetection(det);
-    }
-
-    function logRisk(type, detail = {}) {
-      logEvent(type, detail);
-    }
-
-    // ================== 检测核心 ==================
-    function computeSignals(evts) {
-      const byType = (t) => evts.filter(e => e.type === t);
-      const keydowns = byType("keydown");
-      const befores = byType("beforeinput");
-      const inputs = byType("input");
-      const pastesEv = byType("paste");
-      const compStart = byType("compositionstart");
-      const compEnd = byType("compositionend");
-      const prog = byType("programmatic_set").length + byType("programmatic_clear").length;
-
-      const beforeInsertFromPaste = befores.filter(e => e.inputType === "insertFromPaste").length;
-      const beforeInsertText = befores.filter(e => e.inputType === "insertText").length;
-      const beforeInsertComp = befores.filter(e => e.inputType === "insertCompositionText").length;
-      const beforeDeleteBk = befores.filter(e => e.inputType === "deleteContentBackward").length;
-
-      const pasteLens = pastesEv.map(e => Number(e.pastedLen || 0)).filter(n => Number.isFinite(n));
-      const maxPasteLen = pasteLens.length ? Math.max(...pasteLens) : 0;
-
-      const times = evts.map(e => Date.parse(e.t)).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
-      let minGapMs = Infinity;
-      for (let i=1;i<times.length;i++) minGapMs = Math.min(minGapMs, times[i]-times[i-1]);
-      if (!Number.isFinite(minGapMs)) minGapMs = 0;
-
-      const keySet = new Set(keydowns.map(e => e.key));
-      const keyVariety = keySet.size;
-
-      // 风险事件计数
-      const upperNoShift = evts.filter(e => e.type === "risk_upper_no_shift").length;
-      const upperFromPaste = evts.filter(e => e.type === "risk_upper_from_paste").length;
-      const cnNoIME = evts.filter(e => e.type === "risk_cn_no_ime").length;
-
-      return {
-        totalEvents: evts.length,
-        keydowns: keydowns.length,
-        keyVariety,
-        inputs: inputs.length,
-        befores: befores.length,
-        pastes: pastesEv.length,
-        compStart: compStart.length,
-        compEnd: compEnd.length,
-        prog,
-        beforeInsertFromPaste,
-        beforeInsertText,
-        beforeInsertComp,
-        beforeDeleteBk,
-        maxPasteLen,
-        minGapMs,
-        upperNoShift,
-        upperFromPaste,
-        cnNoIME
-      };
-    }
-
-    function scoreDetection(evts) {
-      const s = computeSignals(evts);
-      let ime = 0, direct = 0, pasteLike = 0;
-      const reasons = [];
-
-      // ====== 三分类得分 ======
-      // IME
-      if (s.compStart > 0 || s.compEnd > 0 || s.beforeInsertComp > 0) {
-        ime += 55; reasons.push("出现输入法合成(composition)");
-      }
-      ime += clamp(s.compStart * 6, 0, 25);
-      if (s.pastes === 0 && s.beforeInsertFromPaste === 0) ime += 10;
-
-      // 直输
-      if (s.beforeInsertText > 0) direct += 35;
-      if (s.keydowns > 0) direct += 30;
-      direct += clamp(s.keyVariety * 4, 0, 20);
-      if (s.compStart === 0 && s.beforeInsertComp === 0) direct += 10;
-      if (s.pastes === 0 && s.beforeInsertFromPaste === 0) direct += 10;
-
-      // pasteLike（✅ 多次才高）
-      if (s.pastes > 0) {
-        const p = s.pastes;
-        const pasteScore = (p === 1) ? 8
-                        : (p === 2) ? 16
-                        : (p === 3) ? 26
-                        : (p === 4) ? 38
-                        : 38 + (p - 4) * 12;
-        pasteLike += pasteScore;
-        reasons.push(`paste×${p}`);
-      }
-
-      if (s.beforeInsertFromPaste > 0) {
-        const n = s.beforeInsertFromPaste;
-        const fromPasteScore = (n === 1) ? 10
-                            : (n === 2) ? 18
-                            : (n === 3) ? 28
-                            : 28 + (n - 3) * 10;
-        pasteLike += fromPasteScore;
-        reasons.push(`insertFromPaste×${n}`);
-      }
-
-      // 单次大段插入仍可疑（保留，但不至于一刀切）
-      pasteLike += clamp(s.maxPasteLen >= 20 ? 18 : (s.maxPasteLen >= 8 ? 10 : (s.maxPasteLen >= 4 ? 6 : 0)), 0, 18);
-
-      if (s.prog > 0) { pasteLike += 30; reasons.push("检测到程序写入(programmatic_set/clear)"); }
-      if (s.keydowns === 0 && s.compStart === 0 && s.pastes > 0) pasteLike += 10;
-      if (s.minGapMs > 0 && s.minGapMs <= 3 && s.totalEvents >= 6) {
-        pasteLike += 10; reasons.push("事件间隔极小(疑似自动化)");
-      }
-
-      if (ime >= 60) pasteLike -= 15;
-      if (pasteLike >= 60) { ime -= 10; direct -= 10; }
-
-      ime = clamp(ime, 0, 100);
-      direct = clamp(direct, 0, 100);
-      pasteLike = clamp(pasteLike, 0, 100);
-
-      let label = "未知";
-      const maxScore = Math.max(ime, direct, pasteLike);
-      if (maxScore === ime) label = "Human(IME)";
-      else if (maxScore === direct) label = "Human(直输)";
-      else label = "Paste(类脚本)";
-
-      // ====== 风险规则叠加（中文无拼音高危；paste 多次才高） ======
-      const ruleRisk =
-        s.upperNoShift * 10 +
-        pasteEscalation(s.upperFromPaste) + // ✅ 递增
-        s.cnNoIME * 30; // ✅ 高危权重
-
-      let risk = pasteLike * 0.85 + ruleRisk;
-
-      if (label === "Human(直输)") {
-        const thinHuman = (s.keydowns === 0 ? 20 : 0) + (s.beforeDeleteBk === 0 ? 10 : 0);
-        risk = risk + thinHuman;
-      }
-      if (label === "Human(IME)") risk = risk - 12;
-
-      // ✅ 高危下限：命中一次至少 70；命中≥3 次至少 85
-      if (s.cnNoIME >= 1) risk = Math.max(risk, 70);
-      if (s.cnNoIME >= 3) risk = Math.max(risk, 85);
-
-      risk = clamp(risk, 0, 100);
-
-      // 解释：优先展示高危规则
-      const ruleReasons = [];
-      if (s.cnNoIME > 0) ruleReasons.push(`【高危】中文无拼音×${s.cnNoIME}`);
-      if (s.upperFromPaste > 0) ruleReasons.push(`粘贴大写×${s.upperFromPaste}(次数越多风险越高)`);
-      if (s.upperNoShift > 0) ruleReasons.push(`大写无Shift×${s.upperNoShift}`);
-
-      const why =
-        (ruleReasons.length ? ruleReasons.slice(0,2).join("；") : "") ||
-        (reasons.slice(0,2).join("；") || "-");
-
-      return {
-        label,
-        risk: Math.round(risk),
-        scores: { ime: Math.round(ime), direct: Math.round(direct), paste: Math.round(pasteLike) },
-        signals: s,
-        why
-      };
-    }
-
-    function renderDetection(det){
-      detLabel.textContent = det.label;
-      detRisk.textContent = det.risk;
-      detIME.textContent = det.scores.ime;
-      detDirect.textContent = det.scores.direct;
-      detPasteScore.textContent = det.scores.paste;
-      detWhy.textContent = det.why;
-
-      pillLabel.classList.remove("good","warn","bad");
-      pillRisk.classList.remove("good","warn","bad");
-
-      if (det.risk >= 70) pillRisk.classList.add("bad");
-      else if (det.risk >= 40) pillRisk.classList.add("warn");
-      else pillRisk.classList.add("good");
-
-      if (det.label === "Human(IME)") pillLabel.classList.add("good");
-      else if (det.label === "Human(直输)") pillLabel.classList.add("warn");
-      else pillLabel.classList.add("bad");
-    }
-
-    // ================== 监听（输入监视）==================
-    btnSearch.addEventListener("click", () => {
-      logEvent("search_click", { q: safeText(ta.value, 80) });
-      setStatus("已记录一次“搜索”点击（不联网）");
-      ta.focus();
-    });
-
-    ta.addEventListener("focus", () => logEvent("focus"));
-    ta.addEventListener("blur", () => logEvent("blur"));
-
-    document.addEventListener("selectionchange", () => {
-      if (document.activeElement === ta) logEvent("selectionchange");
-    });
-
-    ta.addEventListener("keydown", (e) => {
-      if (e.key === "Backspace") backspaces++;
-      lastKeydown = { t: nowMs(), key: e.key, shift: !!e.shiftKey, code: e.code };
-      logEvent("keydown", { key: e.key, code: e.code, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey, shift: e.shiftKey });
-    });
-
-    ta.addEventListener("beforeinput", (e) => {
-      const dataPreview = safeText(e.data, 200);
-
-      // 规则：大写无 Shift（insertText 且 data 含 A-Z，但最近 250ms 没有 shiftKey=true 的 keydown）
-      if (e.inputType === "insertText" && containsUpperAZ(e.data)) {
-        const gap = nowMs() - (lastKeydown.t || 0);
-        const usedShift = (gap >= 0 && gap <= 250 && lastKeydown.shift === true);
-        if (!usedShift) {
-          logRisk("risk_upper_no_shift", {
-            rule: "UppercaseWithoutShift",
-            inputType: e.inputType,
-            data: safeText(e.data, 40),
-            lastKeydown: { key: lastKeydown.key, shift: lastKeydown.shift, code: lastKeydown.code, gapMs: gap }
-          });
-        }
-      }
-
-      // ✅ 高危规则：中文无拼音（更严格：像注入时才触发）
-      if ((e.inputType === "insertText" || e.inputType === "insertFromPaste") && containsChinese(e.data)) {
-        const gap = nowMs() - (lastCompositionAt || 0);
-        const hasRecentIME = (gap >= 0 && gap <= 1200);
-
-        const cnLen = (String(e.data).match(/[\u4E00-\u9FFF]/g) || []).length;
-
-        const suspicious =
-          e.inputType === "insertFromPaste" ||         // 粘贴中文（更可疑）
-          cnLen >= 2 ||                                // 一次插入多个中文（更可疑）
-          (nowMs() - (lastKeydown.t || 0) < 80);       // 快得离谱（更可疑）
-
-        if (!hasRecentIME && suspicious) {
-          logRisk("risk_cn_no_ime", {
-            rule: "ChineseWithoutIME_HIGH",
-            inputType: e.inputType,
-            data: safeText(e.data, 40),
-            cnLen,
-            sinceLastCompositionMs: gap
-          });
-        }
-      }
-
-      logEvent("beforeinput", { inputType: e.inputType, data: dataPreview });
-    });
-
-    ta.addEventListener("input", (e) => {
-      edits++;
-      logEvent("input", { inputType: e.inputType || null });
-    });
-
-    ta.addEventListener("compositionstart", () => {
-      compositions++;
-      logEvent("compositionstart");
-    });
-
-    ta.addEventListener("compositionupdate", (e) => {
-      lastCompositionAt = nowMs();
-      logEvent("compositionupdate", { data: safeText(e.data, 120) });
-    });
-
-    ta.addEventListener("compositionend", (e) => {
-      lastCompositionAt = nowMs();
-      logEvent("compositionend", { data: safeText(e.data, 120) });
-    });
-
-    ta.addEventListener("paste", (e) => {
-      pastes++;
-      let pasted = "";
-      try { pasted = (e.clipboardData || window.clipboardData)?.getData("text") || ""; } catch { pasted = ""; }
-
-      // 规则：粘贴大写（注意：风险不会单次就高，会随次数递增）
-      if (containsUpperAZ(pasted)) {
-        logRisk("risk_upper_from_paste", {
-          rule: "UppercaseFromPaste",
-          pasted: safeText(pasted, 80),
-          pastedLen: pasted.length
-        });
-      }
-
-      logEvent("paste", { pasted: safeText(pasted, 200), pastedLen: pasted.length });
-    });
-
-    ta.addEventListener("copy", () => logEvent("copy"));
-    ta.addEventListener("cut", () => logEvent("cut"));
-
-    // ================== 按钮 ==================
-    btnAutoHello.addEventListener("click", () => {
-      ta.value = "你好";
-      ta.focus();
-      ta.setSelectionRange(0, ta.value.length);
-      edits++;
-      logEvent("programmatic_set", { value: "你好" });
-      setStatus("已写入“你好”(程序)");
-    });
-
-    btnClear.addEventListener("click", () => {
-      ta.value = "";
-      ta.focus();
-      edits++;
-      logEvent("programmatic_clear");
-      setStatus("已清空");
-    });
-
-    btnResetLog.addEventListener("click", () => {
-      logEl.textContent = "";
-      setStatus("日志已清空（数据仍保留，可导出）");
-    });
-
-    btnCopyLog.addEventListener("click", async () => {
-      try{
-        await navigator.clipboard.writeText(logEl.textContent);
-        setStatus("已复制日志到剪贴板");
-      }catch{
-        setStatus("复制失败（浏览器权限限制）");
-      }
-    });
-
-    btnExport.addEventListener("click", () => {
-      const det = scoreDetection(events);
-
-      const payload = {
-        exportedAt: ts(),
-        userAgent: navigator.userAgent,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        captureValue: toggleCaptureContent.checked,
-        stats: { len: ta.value.length, edits, pastes, backspaces, compositions },
-        detection: det,
-        events
-      };
-
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `search-monitor-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      logEvent("export", { bytes: blob.size });
-      setStatus("已导出 JSON（含 detection + 风险触发事件）");
-    });
-
-    // ================== 导入 / 回放 ==================
-    fileImport.addEventListener("change", async (e) => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-
-      try{
-        const text = await f.text();
-        const payload = JSON.parse(text);
-        imported = {
-          payload,
-          detection: payload?.detection || null,
-          events: Array.isArray(payload?.events) ? payload.events : []
-        };
-
-        importInfo.textContent = `已导入：${safeText(f.name, 40)}（events=${imported.events.length}）`;
-
-        const det = imported.detection || scoreDetection(imported.events);
-        imported.detection = det;
-        renderDetection(det);
-
-        setStatus("已导入 JSON（显示其检测结果）");
-      }catch{
-        imported = null;
-        importInfo.textContent = "导入失败";
-        setStatus("导入失败：非合法 JSON 或结构不匹配");
-      }finally{
-        fileImport.value = "";
-      }
-    });
-
-    btnAppendImported.addEventListener("click", () => {
-      if (!imported || !imported.events?.length){
-        setStatus("无可追加的导入 events");
-        return;
-      }
-      appendLogLine("---- [IMPORTED EVENTS APPEND] ----");
-      for (const ev of imported.events.slice(0, 5000)) {
-        appendLogLine(`${ev.t || "-"}  [${ev.type || "?"}]  ` + safeText(JSON.stringify(ev), 220));
-      }
-      appendLogLine("---- [IMPORTED EVENTS END] ----");
-      setStatus("已把导入 events 追加到日志（最多 5000 条）");
-    });
-
-    btnClearImported.addEventListener("click", () => {
-      imported = null;
-      importInfo.textContent = "未导入";
-      setStatus("已清除导入信息（不影响当前会话）");
-      renderDetection(scoreDetection(events));
-    });
-
-    // ================== 初始化 ==================
-    window.addEventListener("DOMContentLoaded", () => {
-      setStatus("已开始监听");
-      ta.value = "";
-      ta.focus();
-      logEvent("init", { preset: "" });
-      updateStats();
-      renderDetection(scoreDetection(events));
-    });
-  </script>
+  }catch{}
+
+  logEvent("keydown", { field:"password", key:e.key, code:e.code, shift:e.shiftKey });
+  updateStatsUIAndMaybeLog();
+});
+
+// beforeinput (also detect insertCompositionText)
+function onBeforeInput(field, e){
+  logEvent("beforeinput", {
+    field,
+    inputType: e.inputType,
+    data: safeText(e.data, 200)
+  });
+
+  if (e.inputType === "insertCompositionText"){
+    bumpIME(field, "beforeinput.insertCompositionText");
+    updateStatsUIAndMaybeLog();
+  }
+}
+usernameField.addEventListener("beforeinput", (e)=>onBeforeInput("username", e));
+passwordField.addEventListener("beforeinput", (e)=>onBeforeInput("password", e));
+
+// input
+usernameField.addEventListener("input", (e)=>{
+  logEvent("input", { field:"username", inputType: e.inputType || null });
+});
+passwordField.addEventListener("input", (e)=>{
+  logEvent("input", { field:"password", inputType: e.inputType || null });
+});
+
+// composition listeners (real IME)
+attachCompositionListeners(usernameField, "username");
+attachCompositionListeners(passwordField, "password");
+
+// paste (count + classify eq2/gt2)
+function onPaste(field, e){
+  pasteCount++;
+  let pastedText = "";
+  try { pastedText = (e.clipboardData || window.clipboardData)?.getData("text") || ""; } catch {}
+  logEvent("paste", { field, pasted: safeText(pastedText, 200), pastedLen: pastedText.length });
+  updateStatsUIAndMaybeLog();
+}
+usernameField.addEventListener("paste", (e)=>onPaste("username", e));
+passwordField.addEventListener("paste", (e)=>onPaste("password", e));
+
+// login click timing
+loginButton.addEventListener("click", ()=>{
+  if (tLoginClickMs == null) tLoginClickMs = nowMs();
+  logEvent("login_clicked", {});
+  updateStatsUIAndMaybeLog();
+});
+
+/* ===================== submit (always success) ===================== */
+form.addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const username = usernameField.value || "";
+  const password = passwordField.value || "";
+  logEvent("submit", { username: safeText(username, 80), passwordLen: password.length });
+
+  // Always success
+  logEvent("login_success", { username: safeText(username, 80) });
+});
+
+/* ===================== export ===================== */
+downloadLogBtn.addEventListener("click", ()=>{
+  const payload = {
+    exportedAt: ts(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    stats: snapshotStats(),
+    logs
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "login_stats_log_with_ime.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+clearLogBtn.addEventListener("click", ()=>{
+  logEl.textContent = "";
+  logEvent("log_cleared", {});
+});
+
+/* ===================== init ===================== */
+window.addEventListener("DOMContentLoaded", ()=>{
+  logEvent("init", {});
+  updateStatsUIAndMaybeLog();
+});
+</script>
 </body>
 </html>
