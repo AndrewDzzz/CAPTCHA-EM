@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login Monitor (Silent Stats + IME)</title>
+  <title>Login Monitor (IME + TypingDNA + Trajectory)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,22 +11,46 @@
       padding: 20px;
     }
     .container {
-      max-width: 620px;
+      max-width: 720px;
       margin: 0 auto;
       padding: 20px;
       background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,.1);
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.08);
     }
-    .input-group { margin-bottom: 18px; }
+    h2 { margin: 0 0 8px; }
+    .note {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #444;
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0 14px;
+    }
+    .note code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }
+
+    .input-group { margin-bottom: 14px; }
     .input-group label { display:block; margin-bottom:8px; font-size:14px; }
     .input-group input {
       width:100%;
       padding:10px;
       font-size:14px;
       border:1px solid #ddd;
-      border-radius:4px;
+      border-radius:6px;
+      outline: none;
     }
+    .input-group input:focus { border-color: #bbb; }
+
+    .row {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin: 10px 0;
+    }
+
     .btn {
       width: 100%;
       padding: 10px;
@@ -34,25 +58,30 @@
       color: white;
       font-size: 16px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
     }
     .btn:hover { background-color:#45a049; }
 
-    .stats {
-      margin-top: 14px;
-      padding: 12px;
-      border: 1px solid #e6e6e6;
-      border-radius: 6px;
-      background: #fafafa;
+    .btn-small {
+      width:auto;
+      padding:8px 10px;
       font-size: 13px;
-      line-height: 1.6;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
     }
-    .stats h3 { margin:0 0 8px; font-size: 14px; }
+    .btn-small:hover { background: #f6f6f6; }
 
-    .kv { display:flex; justify-content:space-between; gap:12px; }
-    .kv b {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    .status {
+      font-size: 13px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e6e6e6;
+      background: #fafafa;
+      margin-top: 10px;
+      line-height: 1.5;
     }
 
     .badge {
@@ -68,52 +97,103 @@
     .warn { border-color: rgba(255,193,7,.5); background: rgba(255,193,7,.12); }
     .bad { border-color: rgba(244,67,54,.45); background: rgba(244,67,54,.10); }
 
+    .stats {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid #e6e6e6;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .stats h3 { margin:0 0 8px; font-size: 14px; }
+
+    .kv { display:flex; justify-content:space-between; gap:12px; }
+    .kv b { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 600; }
+
     .log {
       margin-top: 14px;
       background-color: #f0f0f0;
       padding: 10px;
-      border-radius: 4px;
-      font-family: monospace;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 12px;
       white-space: pre-wrap;
       max-height: 260px;
       overflow-y: auto;
+      border: 1px solid #e8e8e8;
     }
-    .btn-row { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-    .btn-small { width:auto; padding:8px 10px; font-size: 13px; cursor:pointer; }
+
+    .consent {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size: 13px;
+      margin: 10px 0 2px;
+      user-select:none;
+    }
+    .consent input { transform: translateY(1px); }
+
+    .section-title {
+      font-size: 12px;
+      color: #666;
+      margin: 10px 0 6px;
+      padding-top: 8px;
+      border-top: 1px solid #e7e7e7;
+    }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <h2>Login</h2>
+    <h2>Login (IME + TypingDNA + Trajectory)</h2>
 
-    <form id="loginForm">
+    <div class="note">
+      <b>Testing note:</b> TypingDNA records <i>keystroke timings</i>. If you use <b>autofill/password manager</b> or <b>paste</b>,
+      TypingDNA may return an empty pattern. For testing, type manually.<br/>
+      This demo also captures <b>mouse trajectory</b> from username to password field.
+    </div>
+
+    <label class="consent">
+      <input type="checkbox" id="consentChk" />
+      I consent to capturing typing biometrics and mouse trajectory on this page
+    </label>
+
+    <form id="loginForm" autocomplete="off">
       <div class="input-group">
         <label for="username">Username</label>
-        <input type="text" id="username" autocomplete="username" />
+        <input type="text" id="username" autocomplete="off" />
       </div>
 
       <div class="input-group">
         <label for="password">Password</label>
-        <input type="password" id="password" autocomplete="current-password" />
+        <input type="password" id="password" autocomplete="off" />
       </div>
 
       <button type="submit" class="btn" id="loginButton">Login</button>
     </form>
 
-    <!-- Stats Panel (English) -->
+    <div class="row">
+      <button class="btn-small" id="captureBtn" type="button">Capture TypingDNA (debug)</button>
+      <button class="btn-small" id="resetTdnaBtn" type="button">Reset TypingDNA</button>
+      <button class="btn-small" id="clearFormBtn" type="button">Clear fields</button>
+      <span class="badge" id="badgePaste">paste: 0</span>
+    </div>
+
+    <div class="status" id="statusBox">
+      Status: <b id="statusText">Initializing…</b>
+    </div>
+
+    <!-- Stats Panel -->
     <div class="stats" id="statsPanel">
-      <h3>
-        Statistics
-        <span class="badge" id="badgePaste">paste: 0</span>
-      </h3>
+      <h3>Statistics</h3>
 
       <div class="kv"><span>Username focus → Password interaction</span><b id="s_u2p">-</b></div>
-      <div class="kv"><span>Password interaction → Login click</span><b id="s_p2l">-</b></div>
+      <div class="kv"><span>Password interaction → Login action</span><b id="s_p2l">-</b></div>
 
-      <div class="kv"><span>Paste count == 2</span><b id="s_paste_eq2">false</b></div>
-      <div class="kv"><span>Paste count &gt; 2</span><b id="s_paste_gt2">false</b></div>
+      <div class="kv"><span>Paste count (total)</span><b id="s_paste_total">0</b></div>
+      <div class="kv"><span>Paste count (username)</span><b id="s_paste_user">0</b></div>
+      <div class="kv"><span>Paste count (password)</span><b id="s_paste_pass">0</b></div>
 
       <div class="kv"><span>Password Shift key count</span><b id="s_shift_pw">0</b></div>
       <div class="kv"><span>Password CapsLock count</span><b id="s_caps_pw">0</b></div>
@@ -121,337 +201,1482 @@
       <div class="kv"><span>Username IME composition count</span><b id="s_ime_user">0</b></div>
       <div class="kv"><span>Password IME composition count</span><b id="s_ime_pass">0</b></div>
 
-      <!-- ✅ NEW: keydown counts -->
       <div class="kv"><span>Username keydown count</span><b id="s_kd_user">0</b></div>
       <div class="kv"><span>Password keydown count</span><b id="s_kd_pass">0</b></div>
+
+      <!-- Trajectory Stats -->
+      <div class="section-title"><b>Mouse Trajectory (Username → Password)</b></div>
+      <div class="kv"><span>Trajectory captured</span><b id="s_traj_captured">false</b></div>
+      <div class="kv"><span>Trajectory points</span><b id="s_traj_points">0</b></div>
+      <div class="kv"><span>Trajectory distance (px)</span><b id="s_traj_dist">0</b></div>
+      <div class="kv"><span>Trajectory duration (ms)</span><b id="s_traj_duration">-</b></div>
+
+      <!-- TypingDNA Stats -->
+      <div class="section-title"><b>TypingDNA</b></div>
+      <div class="kv"><span>TypingDNA library loaded</span><b id="s_tdna_loaded">false</b></div>
+      <div class="kv"><span>TypingDNA recorder ready</span><b id="s_tdna_ready">false</b></div>
+      <div class="kv"><span>TypingDNA targets added</span><b id="s_tdna_targets">-</b></div>
+      <div class="kv"><span>Last TypingDNA capture</span><b id="s_tdna_last">-</b></div>
+
+      <div class="kv"><span>TypingDNA username tp length (type 1)</span><b id="s_tdna_u_len">0</b></div>
+      <div class="kv"><span>TypingDNA password tp length (type 1)</span><b id="s_tdna_p_len">0</b></div>
+      <div class="kv"><span>TypingDNA combined u+p tp length (type 1)</span><b id="s_tdna_c_len">0</b></div>
+
+      <div class="section-title"><b>Pattern Structure Analysis</b></div>
+      <div style="font-size: 11px; font-family: ui-monospace; background: #f8f8f8; padding: 8px; border-radius: 4px; word-break: break-all; max-height: 140px; overflow-y: auto; border: 1px solid #e0e0e0;">
+        <div style="margin-bottom: 6px;"><b style="color: #4CAF50;">Username:</b> <span id="s_tdna_u_typing_info">-</span></div>
+        <div style="margin-bottom: 6px; font-size: 10px; color: #888;"><span id="s_tdna_u_typing_preview">-</span></div>
+        <div style="margin-bottom: 6px;"><b style="color: #4CAF50;">Password:</b> <span id="s_tdna_p_typing_info">-</span></div>
+        <div style="margin-bottom: 6px; font-size: 10px; color: #888;"><span id="s_tdna_p_typing_preview">-</span></div>
+        <div><b style="color: #4CAF50;">Combined:</b> <span id="s_tdna_c_typing_info">-</span></div>
+        <div style="font-size: 10px; color: #888;"><span id="s_tdna_c_typing_preview">-</span></div>
+      </div>
+
+      <div class="kv"><span>Capture warnings</span><b id="s_tdna_warn">-</b></div>
     </div>
 
     <div class="log" id="log"></div>
 
-    <div class="btn-row">
+    <div class="row">
       <button class="btn-small" id="downloadLogBtn" type="button">Download Log</button>
       <button class="btn-small" id="clearLogBtn" type="button">Clear Log</button>
+      <button class="btn-small" id="generateNLBtn" type="button" style="background:#4CAF50;color:#fff;border-color:#4CAF50;">Generate LLM Prompt (中文)</button>
+      <button class="btn-small" id="generateNLEnBtn" type="button" style="background:#2196F3;color:#fff;border-color:#2196F3;">Generate LLM Prompt (EN)</button>
+    </div>
+
+    <!-- Natural Language Output -->
+    <div class="stats" id="nlPanel" style="display:none;">
+      <h3>LLM Analysis Prompt <button class="btn-small" id="copyNLBtn" style="float:right;font-size:11px;padding:4px 8px;">Copy</button></h3>
+      <div id="nlOutput" style="font-size: 12px; font-family: ui-monospace; background: #f8f8f8; padding: 10px; border-radius: 4px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; line-height: 1.6;"></div>
     </div>
   </div>
 
-<script>
-/* ===================== utils ===================== */
-function ts(){ return new Date().toISOString(); }
-function nowMs(){ return Date.now(); }
-function safeText(s, maxLen=200){
-  if (s == null) return "";
-  s = String(s);
-  return s.length > maxLen ? s.slice(0,maxLen) + "…(" + s.length + ")" : s;
-}
+  <script>
+(() => {
+  /* ===================== utils ===================== */
+  function ts(){ return new Date().toISOString(); }
+  function nowMs(){ return Date.now(); }
 
-/* ===================== DOM ===================== */
-const usernameField = document.getElementById("username");
-const passwordField = document.getElementById("password");
-const loginButton   = document.getElementById("loginButton");
-const form          = document.getElementById("loginForm");
-const logEl         = document.getElementById("log");
-const downloadLogBtn= document.getElementById("downloadLogBtn");
-const clearLogBtn   = document.getElementById("clearLogBtn");
-
-const s_u2p = document.getElementById("s_u2p");
-const s_p2l = document.getElementById("s_p2l");
-const s_paste_eq2 = document.getElementById("s_paste_eq2");
-const s_paste_gt2 = document.getElementById("s_paste_gt2");
-const s_shift_pw  = document.getElementById("s_shift_pw");
-const s_caps_pw   = document.getElementById("s_caps_pw");
-const s_ime_user  = document.getElementById("s_ime_user");
-const s_ime_pass  = document.getElementById("s_ime_pass");
-const s_kd_user   = document.getElementById("s_kd_user");
-const s_kd_pass   = document.getElementById("s_kd_pass");
-const badgePaste  = document.getElementById("badgePaste");
-
-/* ===================== logs ===================== */
-const logs = [];
-function appendLogLine(line){
-  logEl.textContent += line + "\n";
-  logEl.scrollTop = logEl.scrollHeight;
-}
-function logEvent(type, detail={}){
-  const entry = { t: ts(), t_ms: nowMs(), type, ...detail };
-  logs.push(entry);
-  appendLogLine(`${entry.t}  [${type}]  ${JSON.stringify(detail)}`);
-}
-
-/* ===================== stats state ===================== */
-// timing: username focus -> password interaction
-let tFocusUsernameMs = null;
-let tPasswordTouchMs = null;
-
-// timing: password interaction -> login click
-let tLoginClickMs = null;
-
-// paste
-let pasteCount = 0;
-
-// password shift/capslock
-let pwShiftCount = 0;
-let pwCapsCount = 0;
-let lastCapsState = null;
-
-// IME signals
-let imeUsernameCount = 0;
-let imePasswordCount = 0;
-let lastCompositionAtUsernameMs = null;
-let lastCompositionAtPasswordMs = null;
-
-// ✅ NEW: keydown counters
-let usernameKeydownCount = 0;
-let passwordKeydownCount = 0;
-
-/* ===================== helpers ===================== */
-function delta(a,b){
-  if (typeof a !== "number" || typeof b !== "number") return "-";
-  const d = b - a;
-  return (d >= 0 && Number.isFinite(d)) ? `${d} ms` : "-";
-}
-
-function snapshotStats(){
-  return {
-    usernameToPasswordMs:
-      (typeof tFocusUsernameMs === "number" && typeof tPasswordTouchMs === "number")
-        ? (tPasswordTouchMs - tFocusUsernameMs)
-        : null,
-    passwordToLoginMs:
-      (typeof tPasswordTouchMs === "number" && typeof tLoginClickMs === "number")
-        ? (tLoginClickMs - tPasswordTouchMs)
-        : null,
-    pasteCount,
-    pasteEq2: pasteCount === 2,
-    pasteGt2: pasteCount > 2,
-    passwordShiftCount: pwShiftCount,
-    passwordCapsLockCount: pwCapsCount,
-    usernameIMECompositionCount: imeUsernameCount,
-    passwordIMECompositionCount: imePasswordCount,
-    usernameKeydownCount,
-    passwordKeydownCount,
-    lastCompositionAtUsernameMs,
-    lastCompositionAtPasswordMs
-  };
-}
-
-// avoid flooding logs with stats_update
-let lastStatsSig = "";
-function updateStatsUIAndMaybeLog(){
-  s_u2p.textContent = delta(tFocusUsernameMs, tPasswordTouchMs);
-  s_p2l.textContent = delta(tPasswordTouchMs, tLoginClickMs);
-
-  s_paste_eq2.textContent = String(pasteCount === 2);
-  s_paste_gt2.textContent = String(pasteCount > 2);
-
-  s_shift_pw.textContent = String(pwShiftCount);
-  s_caps_pw.textContent  = String(pwCapsCount);
-
-  s_ime_user.textContent = String(imeUsernameCount);
-  s_ime_pass.textContent = String(imePasswordCount);
-
-  // ✅ NEW
-  s_kd_user.textContent = String(usernameKeydownCount);
-  s_kd_pass.textContent = String(passwordKeydownCount);
-
-  badgePaste.textContent = `paste: ${pasteCount}`;
-  badgePaste.classList.remove("ok","warn","bad");
-  if (pasteCount === 0) badgePaste.classList.add("ok");
-  else if (pasteCount <= 2) badgePaste.classList.add("warn");
-  else badgePaste.classList.add("bad");
-
-  const stats = snapshotStats();
-  const sig = JSON.stringify({
-    u2p: stats.usernameToPasswordMs,
-    p2l: stats.passwordToLoginMs,
-    pc: stats.pasteCount,
-    sh: stats.passwordShiftCount,
-    ca: stats.passwordCapsLockCount,
-    iu: stats.usernameIMECompositionCount,
-    ip: stats.passwordIMECompositionCount,
-    ku: stats.usernameKeydownCount,     // ✅ NEW
-    kp: stats.passwordKeydownCount      // ✅ NEW
-  });
-
-  if (sig !== lastStatsSig){
-    lastStatsSig = sig;
-    logEvent("stats_update", stats);
+  function setStatus(text, kind){
+    const statusBox = document.getElementById("statusBox");
+    const statusText = document.getElementById("statusText");
+    statusText.textContent = text;
+    statusBox.classList.remove("ok","warn","bad");
+    if (kind) statusBox.classList.add(kind);
   }
-}
 
-/* ===================== IME detectors ===================== */
-function bumpIME(field, via){
-  if (field === "username") {
-    imeUsernameCount++;
-    lastCompositionAtUsernameMs = nowMs();
-  } else {
-    imePasswordCount++;
-    lastCompositionAtPasswordMs = nowMs();
+  function safeText(s, maxLen=250){
+    if (s == null) return "";
+    s = String(s);
+    return s.length > maxLen ? s.slice(0,maxLen) + "…(" + s.length + ")" : s;
   }
-  logEvent("ime_detected", { field, via });
-}
 
-function attachCompositionListeners(inputEl, field){
-  inputEl.addEventListener("compositionstart", (e) => {
-    bumpIME(field, "compositionstart");
-    logEvent("compositionstart", { field, data: safeText(e.data, 120) });
-    updateStatsUIAndMaybeLog();
-  });
-
-  inputEl.addEventListener("compositionupdate", (e) => {
-    if (field === "username") lastCompositionAtUsernameMs = nowMs();
-    else lastCompositionAtPasswordMs = nowMs();
-    logEvent("compositionupdate", { field, data: safeText(e.data, 120) });
-  });
-
-  inputEl.addEventListener("compositionend", (e) => {
-    if (field === "username") lastCompositionAtUsernameMs = nowMs();
-    else lastCompositionAtPasswordMs = nowMs();
-    logEvent("compositionend", { field, data: safeText(e.data, 120) });
-  });
-}
-
-function markIMEFromKeydown(field, e){
-  const maybeIME = (e.isComposing === true) || (e.keyCode === 229);
-  if (maybeIME){
-    logEvent("ime_hint", { field, via: "keydown", isComposing: !!e.isComposing, keyCode: e.keyCode });
+  /* ===================== privacy-safe logging helpers ===================== */
+  function redactText(_field, _text){
+    return { redacted:true, preview:"[REDACTED]" };
   }
-}
-
-/* ===================== core listeners ===================== */
-// username focus
-usernameField.addEventListener("focus", ()=>{
-  if (tFocusUsernameMs == null) tFocusUsernameMs = nowMs();
-  logEvent("focus", { field:"username" });
-  updateStatsUIAndMaybeLog();
-});
-usernameField.addEventListener("blur", ()=>logEvent("blur", { field:"username" }));
-
-// password touched (click/focus)
-function markPasswordTouched(trigger){
-  if (tPasswordTouchMs == null){
-    tPasswordTouchMs = nowMs();
-    logEvent("password_touched", { trigger });
-    updateStatsUIAndMaybeLog();
+  function redactKey(e){
+    const k = String(e.key || "");
+    if (k.length === 1) return "CHAR";
+    return k || "UNKNOWN";
   }
-}
-passwordField.addEventListener("pointerdown", ()=>markPasswordTouched("pointerdown"));
-passwordField.addEventListener("mousedown",   ()=>markPasswordTouched("mousedown"));
-passwordField.addEventListener("focus",       ()=>{ markPasswordTouched("focus"); logEvent("focus", { field:"password" }); });
-passwordField.addEventListener("blur",        ()=>logEvent("blur", { field:"password" }));
+  function redactCode(code){
+    const c = String(code || "");
+    if (/^(Key|Digit)/.test(c)) return "ALNUM";
+    return c || null;
+  }
 
-// keydowns
-usernameField.addEventListener("keydown", (e)=>{
-  usernameKeydownCount++; // ✅ NEW
-  markIMEFromKeydown("username", e);
-  logEvent("keydown", { field:"username", key:e.key, code:e.code, shift:e.shiftKey });
-  updateStatsUIAndMaybeLog(); // optional: keep for UI refresh
-});
+  /* ===================== DOM ===================== */
+  const usernameField = document.getElementById("username");
+  const passwordField = document.getElementById("password");
+  const loginButton   = document.getElementById("loginButton");
+  const form          = document.getElementById("loginForm");
+  const logEl         = document.getElementById("log");
+  const downloadLogBtn= document.getElementById("downloadLogBtn");
+  const clearLogBtn   = document.getElementById("clearLogBtn");
+  const generateNLBtn = document.getElementById("generateNLBtn");
+  const generateNLEnBtn = document.getElementById("generateNLEnBtn");
+  const nlPanel       = document.getElementById("nlPanel");
+  const nlOutput      = document.getElementById("nlOutput");
+  const copyNLBtn     = document.getElementById("copyNLBtn");
+  const captureBtn    = document.getElementById("captureBtn");
+  const resetTdnaBtn  = document.getElementById("resetTdnaBtn");
+  const clearFormBtn  = document.getElementById("clearFormBtn");
+  const consentChk    = document.getElementById("consentChk");
+  const badgePaste    = document.getElementById("badgePaste");
 
-passwordField.addEventListener("keydown", (e)=>{
-  passwordKeydownCount++; // ✅ NEW
-  markIMEFromKeydown("password", e);
+  // stats DOM
+  const s_u2p = document.getElementById("s_u2p");
+  const s_p2l = document.getElementById("s_p2l");
 
-  if (e.key === "Shift") pwShiftCount++;
-  if (e.key === "CapsLock") pwCapsCount++;
+  const s_paste_total = document.getElementById("s_paste_total");
+  const s_paste_user  = document.getElementById("s_paste_user");
+  const s_paste_pass  = document.getElementById("s_paste_pass");
 
-  // CapsLock state change heuristic
-  try{
-    const caps = !!(e.getModifierState && e.getModifierState("CapsLock"));
-    if (lastCapsState === null) lastCapsState = caps;
-    else if (caps !== lastCapsState){
-      pwCapsCount++;
-      lastCapsState = caps;
-      logEvent("capslock_state_change", { field:"password", caps });
+  const s_shift_pw  = document.getElementById("s_shift_pw");
+  const s_caps_pw   = document.getElementById("s_caps_pw");
+  const s_ime_user  = document.getElementById("s_ime_user");
+  const s_ime_pass  = document.getElementById("s_ime_pass");
+  const s_kd_user   = document.getElementById("s_kd_user");
+  const s_kd_pass   = document.getElementById("s_kd_pass");
+
+  // trajectory stats DOM
+  const s_traj_captured = document.getElementById("s_traj_captured");
+  const s_traj_points   = document.getElementById("s_traj_points");
+  const s_traj_dist     = document.getElementById("s_traj_dist");
+  const s_traj_duration = document.getElementById("s_traj_duration");
+
+  // TypingDNA stats DOM
+  const s_tdna_loaded  = document.getElementById("s_tdna_loaded");
+  const s_tdna_ready   = document.getElementById("s_tdna_ready");
+  const s_tdna_targets = document.getElementById("s_tdna_targets");
+  const s_tdna_last    = document.getElementById("s_tdna_last");
+  const s_tdna_u_len   = document.getElementById("s_tdna_u_len");
+  const s_tdna_p_len   = document.getElementById("s_tdna_p_len");
+  const s_tdna_c_len   = document.getElementById("s_tdna_c_len");
+  const s_tdna_u_typing_info = document.getElementById("s_tdna_u_typing_info");
+  const s_tdna_u_typing_preview = document.getElementById("s_tdna_u_typing_preview");
+  const s_tdna_p_typing_info = document.getElementById("s_tdna_p_typing_info");
+  const s_tdna_p_typing_preview = document.getElementById("s_tdna_p_typing_preview");
+  const s_tdna_c_typing_info = document.getElementById("s_tdna_c_typing_info");
+  const s_tdna_c_typing_preview = document.getElementById("s_tdna_c_typing_preview");
+  const s_tdna_warn    = document.getElementById("s_tdna_warn");
+
+  /* ===================== logs ===================== */
+  const logs = [];
+  function appendLogLine(line){
+    logEl.textContent += line + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function logEvent(type, detail={}){
+    const entry = { t: ts(), t_ms: nowMs(), type, ...detail };
+    logs.push(entry);
+    appendLogLine(`${entry.t}  [${type}]  ${JSON.stringify(detail)}`);
+  }
+
+  /* ===================== stats state ===================== */
+  let tFocusUsernameMs = null;
+  let tPasswordTouchMs = null;
+  let tLoginActionMs   = null;
+
+  let pasteTotal = 0, pasteUser = 0, pastePass = 0;
+
+  let pwShiftCount = 0;
+  let pwCapsCount = 0;
+  let lastCapsState = null;
+
+  let imeUsernameCount = 0;
+  let imePasswordCount = 0;
+
+  let usernameKeydownCount = 0;
+  let passwordKeydownCount = 0;
+
+  /* ===================== Trajectory capture state ===================== */
+  let trajActive = false;
+  let trajPoints = [];
+  let trajStartMs = null;
+  let trajStartMeta = null;
+  let trajLastSampleMs = 0;
+  let trajTimeoutHandle = null;
+
+  // Last captured trajectory stats (for display)
+  let lastTrajCaptured = false;
+  let lastTrajPoints = 0;
+  let lastTrajDist = 0;
+  let lastTrajDuration = null;
+  let lastTrajSample = []; // 保存最后的轨迹采样点
+
+  // sampling / limits
+  const TRAJ_SAMPLE_EVERY_MS = 25;
+  const TRAJ_MAX_POINTS = 1200;
+  const TRAJ_AUTO_STOP_MS = 15000;
+
+  function clampNumber(n){
+    return (typeof n === "number" && Number.isFinite(n)) ? n : null;
+  }
+
+  function trajAddPoint(e, kind){
+    if (!trajActive) return;
+    const tms = nowMs();
+    if ((tms - trajLastSampleMs) < TRAJ_SAMPLE_EVERY_MS) return;
+    trajLastSampleMs = tms;
+
+    if (trajPoints.length >= TRAJ_MAX_POINTS) return;
+
+    const p = {
+      t_ms: tms,
+      kind: kind || "move",
+      x: clampNumber(e.clientX),
+      y: clampNumber(e.clientY),
+      pointerType: e.pointerType || null
+    };
+    trajPoints.push(p);
+  }
+
+  function trajDistance(points){
+    if (!Array.isArray(points) || points.length < 2) return 0;
+    let d = 0;
+    for (let i=1;i<points.length;i++){
+      const a = points[i-1], b = points[i];
+      if (typeof a.x !== "number" || typeof a.y !== "number" || typeof b.x !== "number" || typeof b.y !== "number") continue;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      d += Math.sqrt(dx*dx + dy*dy);
     }
-  }catch{}
+    return d;
+  }
 
-  logEvent("keydown", { field:"password", key:e.key, code:e.code, shift:e.shiftKey });
-  updateStatsUIAndMaybeLog();
-});
+  function trajBBox(points){
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let ok = false;
+    for (const p of points){
+      if (typeof p.x !== "number" || typeof p.y !== "number") continue;
+      ok = true;
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    if (!ok) return null;
+    return { minX, minY, maxX, maxY, w: (maxX-minX), h: (maxY-minY) };
+  }
 
-// beforeinput (also detect insertCompositionText)
-function onBeforeInput(field, e){
-  logEvent("beforeinput", {
-    field,
-    inputType: e.inputType,
-    data: safeText(e.data, 200)
+  function startTrajectory(reason){
+    if (trajActive) return;
+    if (!consentChk.checked) return; // respect consent
+    
+    trajActive = true;
+    trajPoints = [];
+    trajStartMs = nowMs();
+    trajStartMeta = { reason, viewport: { w: window.innerWidth, h: window.innerHeight } };
+    trajLastSampleMs = 0;
+
+    logEvent("trajectory_start", { reason });
+
+    if (trajTimeoutHandle) clearTimeout(trajTimeoutHandle);
+    trajTimeoutHandle = setTimeout(()=>{
+      stopTrajectory("timeout");
+    }, TRAJ_AUTO_STOP_MS);
+  }
+
+  function stopTrajectory(reason){
+    if (!trajActive) return;
+    trajActive = false;
+
+    if (trajTimeoutHandle) {
+      clearTimeout(trajTimeoutHandle);
+      trajTimeoutHandle = null;
+    }
+
+    const endMs = nowMs();
+    const durationMs = (typeof trajStartMs === "number") ? (endMs - trajStartMs) : null;
+    const bbox = trajBBox(trajPoints);
+    const dist = trajDistance(trajPoints);
+
+    const first = trajPoints[0] || null;
+    const last  = trajPoints[trajPoints.length - 1] || null;
+
+    // Save sparse sample (max 120 points)
+    const sampleMax = 120;
+    let sample = [];
+    if (trajPoints.length > 0){
+      const step = Math.max(1, Math.floor(trajPoints.length / sampleMax));
+      for (let i=0;i<trajPoints.length;i+=step){
+        sample.push(trajPoints[i]);
+        if (sample.length >= sampleMax) break;
+      }
+      if (sample[sample.length-1] !== last && last) sample.push(last);
+    }
+
+    // Update last trajectory stats
+    lastTrajCaptured = trajPoints.length > 0;
+    lastTrajPoints = trajPoints.length;
+    lastTrajDist = Math.round(dist);
+    lastTrajDuration = durationMs;
+    lastTrajSample = sample; // 保存轨迹采样点
+
+    logEvent("trajectory_end", {
+      reason,
+      durationMs,
+      points: trajPoints.length,
+      approxDistancePx: Math.round(dist),
+      bbox,
+      first,
+      last,
+      sample
+    });
+
+    trajPoints = [];
+    trajStartMs = null;
+    trajStartMeta = null;
+    
+    updateStatsUI();
+  }
+
+  // Global pointer listeners for trajectory
+  document.addEventListener("pointermove", (e)=>trajAddPoint(e, "move"), { passive: true });
+  document.addEventListener("pointerdown", (e)=>trajAddPoint(e, "down"), { passive: true });
+
+  /* ===================== TypingDNA state ===================== */
+  const TDNA_USER_TYPE = 1;
+  const TDNA_PASS_TYPE = 1;
+  const TDNA_COMBO_TYPE = 1;
+
+  let tdna = null;
+  let tdnaLibraryLoaded = false;
+  let tdnaReady = false;
+  let tdnaTargetsAdded = false;
+
+  let lastTdnaUserTpLen = 0;
+  let lastTdnaPassTpLen = 0;
+  let lastTdnaComboTpLen = 0;
+  let lastTdnaUserTp = "";
+  let lastTdnaPassTp = "";
+  let lastTdnaComboTp = "";
+  
+  let usernamePatternAtBlur = "";
+  let passwordPatternAtBlur = "";
+  
+  let lastTdnaCapturedAtMs = null;
+  let lastTdnaWarnings = [];
+
+  let kdUserAtReset = 0, kdPassAtReset = 0;
+  let pasteUserAtReset = 0, pastePassAtReset = 0;
+  let tdnaSessionStarted = false;
+
+  function delta(a,b){
+    if (typeof a !== "number" || typeof b !== "number") return "-";
+    const d = b - a;
+    return (d >= 0 && Number.isFinite(d)) ? `${d} ms` : "-";
+  }
+
+  function fmtWhen(ms){
+    if (typeof ms !== "number") return "-";
+    return new Date(ms).toLocaleString();
+  }
+
+  function analyzePattern(patternStr){
+    if (!patternStr) return { typingData: "", metadata: "", typingDataLength: 0, metadataLength: 0, totalLength: 0 };
+    
+    const parts = patternStr.split(",");
+    const totalLength = parts.length;
+    
+    let metadataStartIdx = parts.length;
+    for (let i = 0; i < parts.length; i++) {
+      const val = parseFloat(parts[i]);
+      if (val === 84 || val === 82 || val === 1920 || (val > 100 && val < 1000 && i > 100)) {
+        metadataStartIdx = i;
+        break;
+      }
+    }
+    
+    if (metadataStartIdx === parts.length && parts.length > 200) {
+      metadataStartIdx = parts.length - 25;
+    }
+    
+    const typingData = parts.slice(0, metadataStartIdx).join(",");
+    const metadata = parts.slice(metadataStartIdx).join(",");
+    
+    return {
+      typingData: typingData,
+      metadata: metadata,
+      typingDataLength: typingData.split(",").length,
+      metadataLength: metadata.split(",").length,
+      totalLength: totalLength,
+      typingDataPreview: typingData.substring(0, 100) + (typingData.length > 100 ? "..." : ""),
+      metadataPreview: metadata.substring(0, 100) + (metadata.length > 100 ? "..." : "")
+    };
+  }
+
+  function updatePasteBadge(){
+    badgePaste.textContent = `paste: ${pasteTotal}`;
+    badgePaste.classList.remove("ok","warn","bad");
+    if (pasteTotal === 0) badgePaste.classList.add("ok");
+    else if (pasteTotal <= 2) badgePaste.classList.add("warn");
+    else badgePaste.classList.add("bad");
+  }
+
+  function updateStatsUI(){
+    s_u2p.textContent = delta(tFocusUsernameMs, tPasswordTouchMs);
+    s_p2l.textContent = delta(tPasswordTouchMs, tLoginActionMs);
+
+    s_paste_total.textContent = String(pasteTotal);
+    s_paste_user.textContent  = String(pasteUser);
+    s_paste_pass.textContent  = String(pastePass);
+
+    s_shift_pw.textContent = String(pwShiftCount);
+    s_caps_pw.textContent  = String(pwCapsCount);
+
+    s_ime_user.textContent = String(imeUsernameCount);
+    s_ime_pass.textContent = String(imePasswordCount);
+
+    s_kd_user.textContent  = String(usernameKeydownCount);
+    s_kd_pass.textContent  = String(passwordKeydownCount);
+
+    // Trajectory stats
+    s_traj_captured.textContent = String(lastTrajCaptured);
+    s_traj_points.textContent = String(lastTrajPoints);
+    s_traj_dist.textContent = String(lastTrajDist);
+    s_traj_duration.textContent = lastTrajDuration != null ? `${lastTrajDuration} ms` : "-";
+
+    // TypingDNA stats
+    s_tdna_loaded.textContent = String(tdnaLibraryLoaded);
+    s_tdna_ready.textContent  = String(tdnaReady);
+    s_tdna_targets.textContent = tdnaTargetsAdded ? "username,password" : "-";
+    s_tdna_last.textContent = lastTdnaCapturedAtMs ? fmtWhen(lastTdnaCapturedAtMs) : "-";
+
+    s_tdna_u_len.textContent = String(lastTdnaUserTpLen);
+    s_tdna_p_len.textContent = String(lastTdnaPassTpLen);
+    s_tdna_c_len.textContent = String(lastTdnaComboTpLen);
+
+    const uAnalysis = analyzePattern(lastTdnaUserTp);
+    const pAnalysis = analyzePattern(lastTdnaPassTp);
+    const cAnalysis = analyzePattern(lastTdnaComboTp);
+    
+    s_tdna_u_typing_info.textContent = uAnalysis.typingDataLength > 0 
+      ? `Length: ${uAnalysis.typingDataLength} (typing) + ${uAnalysis.metadataLength} (meta) = ${uAnalysis.totalLength}`
+      : "-";
+    s_tdna_u_typing_preview.textContent = uAnalysis.typingDataPreview || "-";
+    
+    s_tdna_p_typing_info.textContent = pAnalysis.typingDataLength > 0
+      ? `Length: ${pAnalysis.typingDataLength} (typing) + ${pAnalysis.metadataLength} (meta) = ${pAnalysis.totalLength}`
+      : "-";
+    s_tdna_p_typing_preview.textContent = pAnalysis.typingDataPreview || "-";
+    
+    s_tdna_c_typing_info.textContent = cAnalysis.typingDataLength > 0
+      ? `Length: ${cAnalysis.typingDataLength} (typing) + ${cAnalysis.metadataLength} (meta) = ${cAnalysis.totalLength}`
+      : "-";
+    s_tdna_c_typing_preview.textContent = cAnalysis.typingDataPreview || "-";
+
+    s_tdna_warn.textContent = (lastTdnaWarnings.length ? lastTdnaWarnings.join(" | ") : "-");
+
+    updatePasteBadge();
+  }
+
+  function snapshotStats(){
+    return {
+      usernameToPasswordMs:
+        (typeof tFocusUsernameMs === "number" && typeof tPasswordTouchMs === "number")
+          ? (tPasswordTouchMs - tFocusUsernameMs)
+          : null,
+      passwordToLoginMs:
+        (typeof tPasswordTouchMs === "number" && typeof tLoginActionMs === "number")
+          ? (tLoginActionMs - tPasswordTouchMs)
+          : null,
+      pasteTotal, pasteUser, pastePass,
+      passwordShiftCount: pwShiftCount,
+      passwordCapsLockCount: pwCapsCount,
+      usernameIMECompositionCount: imeUsernameCount,
+      passwordIMECompositionCount: imePasswordCount,
+      usernameKeydownCount, passwordKeydownCount,
+      trajectory: {
+        captured: lastTrajCaptured,
+        points: lastTrajPoints,
+        distancePx: lastTrajDist,
+        durationMs: lastTrajDuration,
+        sample: lastTrajSample // 轨迹采样点
+      },
+      typingdna: {
+        libraryLoaded: tdnaLibraryLoaded,
+        recorderReady: tdnaReady,
+        targetsAdded: tdnaTargetsAdded,
+        lastCaptureAtMs: lastTdnaCapturedAtMs,
+        lastUserTpLen: lastTdnaUserTpLen,
+        lastPassTpLen: lastTdnaPassTpLen,
+        lastComboTpLen: lastTdnaComboTpLen,
+        lastUserTp: lastTdnaUserTp,
+        lastPassTp: lastTdnaPassTp,
+        lastComboTp: lastTdnaComboTp,
+        lastWarnings: lastTdnaWarnings.slice()
+      }
+    };
+  }
+
+  /* ===================== Natural Language Generator ===================== */
+  function parseTypingDNAPattern(patternStr) {
+    if (!patternStr) return null;
+    
+    const segments = patternStr.split("|");
+    if (segments.length < 2) return null;
+    
+    const header = segments[0].split(",");
+    const keystrokes = segments.slice(1).map(seg => {
+      const parts = seg.split(",");
+      return {
+        charCode: parseInt(parts[0]) || 0,
+        seekTime: parseInt(parts[1]) || 0,
+        pressTime: parseInt(parts[2]) || 0,
+        keyCode: parseInt(parts[3]) || 0
+      };
+    });
+    
+    // 计算统计数据
+    const seekTimes = keystrokes.map(k => k.seekTime).filter(t => t > 0);
+    const pressTimes = keystrokes.map(k => k.pressTime).filter(t => t > 0);
+    
+    const avgSeek = seekTimes.length ? (seekTimes.reduce((a,b)=>a+b,0) / seekTimes.length) : 0;
+    const avgPress = pressTimes.length ? (pressTimes.reduce((a,b)=>a+b,0) / pressTimes.length) : 0;
+    const maxSeek = seekTimes.length ? Math.max(...seekTimes) : 0;
+    const minSeek = seekTimes.length ? Math.min(...seekTimes) : 0;
+    const maxPress = pressTimes.length ? Math.max(...pressTimes) : 0;
+    const minPress = pressTimes.length ? Math.min(...pressTimes) : 0;
+    
+    // 计算标准差
+    const seekStd = seekTimes.length > 1 
+      ? Math.sqrt(seekTimes.reduce((sum, t) => sum + Math.pow(t - avgSeek, 2), 0) / seekTimes.length)
+      : 0;
+    const pressStd = pressTimes.length > 1
+      ? Math.sqrt(pressTimes.reduce((sum, t) => sum + Math.pow(t - avgPress, 2), 0) / pressTimes.length)
+      : 0;
+    
+    // 检测异常长停顿（可能是思考或查看密码）
+    const longPauses = seekTimes.filter(t => t > 500).length;
+    
+    return {
+      keystrokeCount: keystrokes.length,
+      avgSeekTime: Math.round(avgSeek),
+      avgPressTime: Math.round(avgPress),
+      seekTimeRange: { min: minSeek, max: maxSeek },
+      pressTimeRange: { min: minPress, max: maxPress },
+      seekTimeStd: Math.round(seekStd),
+      pressTimeStd: Math.round(pressStd),
+      longPauses,
+      keystrokes
+    };
+  }
+
+  function generateNaturalLanguagePrompt() {
+    const stats = snapshotStats();
+    
+    let lines = [];
+    
+    lines.push("=== 登录行为分析报告 ===\n");
+    lines.push("请根据以下用户登录行为特征，分析该登录是否为真人操作，是否存在异常行为风险。\n");
+    
+    // 2. 时间特征
+    lines.push("【时间特征】");
+    if (stats.usernameToPasswordMs != null) {
+      const u2pSec = (stats.usernameToPasswordMs / 1000).toFixed(2);
+      lines.push(`- 从用户名输入到密码输入的间隔: ${stats.usernameToPasswordMs} 毫秒 (${u2pSec} 秒)`);
+      if (stats.usernameToPasswordMs < 300) {
+        lines.push(`  ⚠️ 间隔极短，可能是自动化脚本或粘贴操作`);
+      } else if (stats.usernameToPasswordMs > 10000) {
+        lines.push(`  ⚠️ 间隔较长，用户可能在查找密码或犹豫`);
+      }
+    } else {
+      lines.push(`- 从用户名到密码的间隔: 未记录`);
+    }
+    
+    if (stats.passwordToLoginMs != null) {
+      const p2lSec = (stats.passwordToLoginMs / 1000).toFixed(2);
+      lines.push(`- 从密码输入到点击登录的间隔: ${stats.passwordToLoginMs} 毫秒 (${p2lSec} 秒)`);
+      if (stats.passwordToLoginMs < 100) {
+        lines.push(`  ⚠️ 间隔极短，可能是自动化操作`);
+      }
+    } else {
+      lines.push(`- 从密码到登录的间隔: 未记录`);
+    }
+    lines.push("");
+    
+    // 3. 按键统计
+    lines.push("【按键统计】");
+    lines.push(`- 用户名字段按键次数: ${stats.usernameKeydownCount} 次`);
+    lines.push(`- 密码字段按键次数: ${stats.passwordKeydownCount} 次`);
+    
+    lines.push(`- 密码字段 Shift 键使用次数: ${stats.passwordShiftCount} 次`);
+    if (stats.passwordShiftCount > 0) {
+      lines.push(`  ℹ️ 用户使用了 Shift 键输入大写字母或特殊符号`);
+    }
+    
+    lines.push(`- 密码字段 CapsLock 切换次数: ${stats.passwordCapsLockCount} 次`);
+    if (stats.passwordCapsLockCount > 2) {
+      lines.push(`  ⚠️ CapsLock 频繁切换，用户可能对密码不熟悉`);
+    }
+    lines.push("");
+    
+    // 4. 粘贴检测
+    lines.push("【粘贴检测】");
+    lines.push(`- 总粘贴次数: ${stats.pasteTotal} 次`);
+    lines.push(`- 用户名字段粘贴: ${stats.pasteUser} 次`);
+    lines.push(`- 密码字段粘贴: ${stats.pastePass} 次`);
+    if (stats.pastePass > 0) {
+      lines.push(`  ⚠️ 检测到密码粘贴行为，可能使用密码管理器或从其他地方复制`);
+    }
+    lines.push("");
+    
+    // 5. IME 输入法检测
+    lines.push("【输入法检测】");
+    lines.push(`- 用户名 IME 组合输入次数: ${stats.usernameIMECompositionCount} 次`);
+    lines.push(`- 密码 IME 组合输入次数: ${stats.passwordIMECompositionCount} 次`);
+    if (stats.passwordIMECompositionCount > 0) {
+      lines.push(`  ⚠️ 密码字段使用了 IME 输入法，这在密码输入中较为罕见`);
+    }
+    lines.push("");
+    
+    // 6. 鼠标轨迹（从用户名字段到密码字段）
+    lines.push("【鼠标轨迹分析（用户名→密码）】");
+    lines.push("说明: 此轨迹记录用户从用户名输入框移动到密码输入框的鼠标/触摸路径");
+    if (stats.trajectory.captured) {
+      lines.push(`- 轨迹已捕获: 是`);
+      lines.push(`- 轨迹采样点数: ${stats.trajectory.points} 个`);
+      lines.push(`- 轨迹总距离: ${stats.trajectory.distancePx} 像素`);
+      lines.push(`- 轨迹持续时间: ${stats.trajectory.durationMs} 毫秒`);
+      
+      if (stats.trajectory.points > 0 && stats.trajectory.durationMs > 0) {
+        const speed = (stats.trajectory.distancePx / stats.trajectory.durationMs * 1000).toFixed(1);
+        lines.push(`- 平均移动速度: ${speed} 像素/秒`);
+        
+        if (stats.trajectory.points < 5 && stats.trajectory.distancePx > 100) {
+          lines.push(`  ⚠️ 轨迹点少但距离长，可能是瞬移（自动化特征）`);
+        }
+        if (parseFloat(speed) > 5000) {
+          lines.push(`  ⚠️ 移动速度异常快，可能是自动化操作`);
+        }
+        if (stats.trajectory.points === 0) {
+          lines.push(`  ⚠️ 无轨迹点，可能是直接定位（自动化特征）`);
+        }
+      }
+      
+      // 打印轨迹点数据
+      if (stats.trajectory.sample && stats.trajectory.sample.length > 0) {
+        lines.push(`\n轨迹点数据 (采样 ${stats.trajectory.sample.length} 个点):`);
+        lines.push(`格式: [时间ms, x坐标, y坐标, 事件类型]`);
+        lines.push(`事件类型说明: move=鼠标移动, down=鼠标按下, up=鼠标释放`);
+        const trajData = stats.trajectory.sample.map(p => 
+          `[${p.t_ms}, ${p.x}, ${p.y}, "${p.kind}"]`
+        ).join(", ");
+        lines.push(trajData);
+      }
+    } else {
+      lines.push(`- 轨迹已捕获: 否`);
+      lines.push(`  ℹ️ 用户可能使用键盘 Tab 切换字段，未使用鼠标点击密码框`);
+    }
+    lines.push("");
+    
+    // 7. TypingDNA 打字节奏分析
+    lines.push("【打字节奏分析 (TypingDNA)】");
+    if (stats.typingdna.recorderReady) {
+      // 解析用户名 pattern
+      const userPattern = parseTypingDNAPattern(stats.typingdna.lastUserTp);
+      if (userPattern && userPattern.keystrokeCount > 0) {
+        lines.push(`\n用户名打字特征:`);
+        lines.push(`- 记录按键数: ${userPattern.keystrokeCount} 个`);
+        lines.push(`- 平均按键间隔 (seekTime): ${userPattern.avgSeekTime} 毫秒`);
+        lines.push(`- 按键间隔范围: ${userPattern.seekTimeRange.min} - ${userPattern.seekTimeRange.max} 毫秒`);
+        lines.push(`- 按键间隔标准差: ${userPattern.seekTimeStd} 毫秒`);
+        lines.push(`- 长停顿次数 (>500ms): ${userPattern.longPauses} 次`);
+        
+        // 显示每个按键的 seekTime 数值
+        const userSeekTimes = userPattern.keystrokes.map(k => k.seekTime);
+        lines.push(`- 各按键间隔序列 (ms): [${userSeekTimes.join(", ")}]`);
+        
+        if (userPattern.seekTimeStd < 20 && userPattern.keystrokeCount > 3) {
+          lines.push(`  ⚠️ 按键间隔非常均匀，可能是机器人或脚本`);
+        }
+        if (userPattern.avgSeekTime < 30) {
+          lines.push(`  ⚠️ 打字速度极快（平均间隔<30ms），超出正常人类速度`);
+        }
+        if (userPattern.longPauses > 3) {
+          lines.push(`  ℹ️ 多次长停顿，用户可能在思考或查看`);
+        }
+      } else {
+        lines.push(`- 用户名: 未捕获到打字数据（可能是粘贴、自动填充或IME输入）`);
+      }
+      
+      // 解析密码 pattern
+      const passPattern = parseTypingDNAPattern(stats.typingdna.lastPassTp);
+      if (passPattern && passPattern.keystrokeCount > 0) {
+        lines.push(`\n密码打字特征:`);
+        lines.push(`- 记录按键数: ${passPattern.keystrokeCount} 个`);
+        lines.push(`- 平均按键间隔 (seekTime): ${passPattern.avgSeekTime} 毫秒`);
+        lines.push(`- 按键间隔范围: ${passPattern.seekTimeRange.min} - ${passPattern.seekTimeRange.max} 毫秒`);
+        lines.push(`- 按键间隔标准差: ${passPattern.seekTimeStd} 毫秒`);
+        lines.push(`- 长停顿次数 (>500ms): ${passPattern.longPauses} 次`);
+        
+        // 显示每个按键的 seekTime 数值
+        const passSeekTimes = passPattern.keystrokes.map(k => k.seekTime);
+        lines.push(`- 各按键间隔序列 (ms): [${passSeekTimes.join(", ")}]`);
+        
+        if (passPattern.seekTimeStd < 20 && passPattern.keystrokeCount > 3) {
+          lines.push(`  ⚠️ 按键间隔非常均匀，可能是机器人或脚本`);
+        }
+        if (passPattern.avgSeekTime < 30) {
+          lines.push(`  ⚠️ 打字速度极快（平均间隔<30ms），超出正常人类速度`);
+        }
+      } else {
+        lines.push(`\n- 密码: 未捕获到打字数据（可能是粘贴、自动填充或IME输入）`);
+      }
+      
+      if (stats.typingdna.lastWarnings.length > 0) {
+        lines.push(`\n捕获警告: ${stats.typingdna.lastWarnings.join(", ")}`);
+      }
+    } else {
+      lines.push(`- TypingDNA 未就绪，无法分析打字节奏`);
+    }
+    lines.push("");
+    
+    // 8. 综合风险评估提示
+    lines.push("【请分析以下问题】");
+    lines.push("1. 根据以上特征，该登录行为是否像真人操作？");
+    lines.push("2. 是否存在自动化脚本或机器人的特征？");
+    lines.push("3. 用户对密码的熟悉程度如何？");
+    lines.push("4. 是否有任何异常行为需要进一步验证？");
+    lines.push("5. 综合风险评级（低/中/高）及理由。");
+    
+    return lines.join("\n");
+  }
+
+  /* ===================== English Natural Language Generator ===================== */
+  function generateNaturalLanguagePromptEN() {
+    const stats = snapshotStats();
+    
+    let lines = [];
+    
+    lines.push("=== Login Behavior Analysis Report ===\n");
+    lines.push("Please analyze the following user login behavior features to determine if this is a genuine human operation and identify any abnormal behavior risks.\n");
+    
+    // 1. Time Features
+    lines.push("[Time Features]");
+    if (stats.usernameToPasswordMs != null) {
+      const u2pSec = (stats.usernameToPasswordMs / 1000).toFixed(2);
+      lines.push(`- Time from username input to password input: ${stats.usernameToPasswordMs} ms (${u2pSec} sec)`);
+      if (stats.usernameToPasswordMs < 300) {
+        lines.push(`  ⚠️ Very short interval, possibly automated script or paste operation`);
+      } else if (stats.usernameToPasswordMs > 10000) {
+        lines.push(`  ⚠️ Long interval, user may be looking up password or hesitating`);
+      }
+    } else {
+      lines.push(`- Time from username to password: Not recorded`);
+    }
+    
+    if (stats.passwordToLoginMs != null) {
+      const p2lSec = (stats.passwordToLoginMs / 1000).toFixed(2);
+      lines.push(`- Time from password input to login click: ${stats.passwordToLoginMs} ms (${p2lSec} sec)`);
+      if (stats.passwordToLoginMs < 100) {
+        lines.push(`  ⚠️ Very short interval, possibly automated operation`);
+      }
+    } else {
+      lines.push(`- Time from password to login: Not recorded`);
+    }
+    lines.push("");
+    
+    // 2. Keystroke Statistics
+    lines.push("[Keystroke Statistics]");
+    lines.push(`- Username field keydown count: ${stats.usernameKeydownCount}`);
+    lines.push(`- Password field keydown count: ${stats.passwordKeydownCount}`);
+    
+    lines.push(`- Password field Shift key count: ${stats.passwordShiftCount}`);
+    if (stats.passwordShiftCount > 0) {
+      lines.push(`  ℹ️ User used Shift key for uppercase letters or special characters`);
+    }
+    
+    lines.push(`- Password field CapsLock toggle count: ${stats.passwordCapsLockCount}`);
+    if (stats.passwordCapsLockCount > 2) {
+      lines.push(`  ⚠️ Frequent CapsLock toggles, user may be unfamiliar with password`);
+    }
+    lines.push("");
+    
+    // 3. Paste Detection
+    lines.push("[Paste Detection]");
+    lines.push(`- Total paste count: ${stats.pasteTotal}`);
+    lines.push(`- Username field paste: ${stats.pasteUser}`);
+    lines.push(`- Password field paste: ${stats.pastePass}`);
+    if (stats.pastePass > 0) {
+      lines.push(`  ⚠️ Password paste detected, possibly using password manager or copying from elsewhere`);
+    }
+    lines.push("");
+    
+    // 4. IME Input Detection
+    lines.push("[IME Input Detection]");
+    lines.push(`- Username IME composition count: ${stats.usernameIMECompositionCount}`);
+    lines.push(`- Password IME composition count: ${stats.passwordIMECompositionCount}`);
+    if (stats.passwordIMECompositionCount > 0) {
+      lines.push(`  ⚠️ IME input method used in password field, uncommon for password input`);
+    }
+    lines.push("");
+    
+    // 5. Mouse Trajectory (Username → Password)
+    lines.push("[Mouse Trajectory Analysis (Username → Password)]");
+    lines.push("Note: This trajectory records the mouse/touch path from username field to password field");
+    if (stats.trajectory.captured) {
+      lines.push(`- Trajectory captured: Yes`);
+      lines.push(`- Sample points: ${stats.trajectory.points}`);
+      lines.push(`- Total distance: ${stats.trajectory.distancePx} pixels`);
+      lines.push(`- Duration: ${stats.trajectory.durationMs} ms`);
+      
+      if (stats.trajectory.points > 0 && stats.trajectory.durationMs > 0) {
+        const speed = (stats.trajectory.distancePx / stats.trajectory.durationMs * 1000).toFixed(1);
+        lines.push(`- Average speed: ${speed} pixels/sec`);
+        
+        if (stats.trajectory.points < 5 && stats.trajectory.distancePx > 100) {
+          lines.push(`  ⚠️ Few points but long distance, possibly teleportation (automation signature)`);
+        }
+        if (parseFloat(speed) > 5000) {
+          lines.push(`  ⚠️ Abnormally fast movement, possibly automated operation`);
+        }
+        if (stats.trajectory.points === 0) {
+          lines.push(`  ⚠️ No trajectory points, possibly direct positioning (automation signature)`);
+        }
+      }
+      
+      // Print trajectory data
+      if (stats.trajectory.sample && stats.trajectory.sample.length > 0) {
+        lines.push(`\nTrajectory data (${stats.trajectory.sample.length} sampled points):`);
+        lines.push(`Format: [timestamp_ms, x, y, event_type]`);
+        lines.push(`Event types: move=mouse move, down=mouse down, up=mouse up`);
+        const trajData = stats.trajectory.sample.map(p => 
+          `[${p.t_ms}, ${p.x}, ${p.y}, "${p.kind}"]`
+        ).join(", ");
+        lines.push(trajData);
+      }
+    } else {
+      lines.push(`- Trajectory captured: No`);
+      lines.push(`  ℹ️ User may have used Tab key to switch fields, no mouse click on password field`);
+    }
+    lines.push("");
+    
+    // 6. Typing Rhythm Analysis (TypingDNA)
+    lines.push("[Typing Rhythm Analysis (TypingDNA)]");
+    if (stats.typingdna.recorderReady) {
+      // Parse username pattern
+      const userPattern = parseTypingDNAPattern(stats.typingdna.lastUserTp);
+      if (userPattern && userPattern.keystrokeCount > 0) {
+        lines.push(`\nUsername typing features:`);
+        lines.push(`- Recorded keystrokes: ${userPattern.keystrokeCount}`);
+        lines.push(`- Average key interval (seekTime): ${userPattern.avgSeekTime} ms`);
+        lines.push(`- Key interval range: ${userPattern.seekTimeRange.min} - ${userPattern.seekTimeRange.max} ms`);
+        lines.push(`- Key interval std deviation: ${userPattern.seekTimeStd} ms`);
+        lines.push(`- Long pauses (>500ms): ${userPattern.longPauses}`);
+        
+        // Show seekTime sequence
+        const userSeekTimes = userPattern.keystrokes.map(k => k.seekTime);
+        lines.push(`- Key interval sequence (ms): [${userSeekTimes.join(", ")}]`);
+        
+        if (userPattern.seekTimeStd < 20 && userPattern.keystrokeCount > 3) {
+          lines.push(`  ⚠️ Very uniform key intervals, possibly bot or script`);
+        }
+        if (userPattern.avgSeekTime < 30) {
+          lines.push(`  ⚠️ Extremely fast typing (avg interval <30ms), exceeds normal human speed`);
+        }
+        if (userPattern.longPauses > 3) {
+          lines.push(`  ℹ️ Multiple long pauses, user may be thinking or looking up`);
+        }
+      } else {
+        lines.push(`- Username: No typing data captured (possibly paste, autofill, or IME input)`);
+      }
+      
+      // Parse password pattern
+      const passPattern = parseTypingDNAPattern(stats.typingdna.lastPassTp);
+      if (passPattern && passPattern.keystrokeCount > 0) {
+        lines.push(`\nPassword typing features:`);
+        lines.push(`- Recorded keystrokes: ${passPattern.keystrokeCount}`);
+        lines.push(`- Average key interval (seekTime): ${passPattern.avgSeekTime} ms`);
+        lines.push(`- Key interval range: ${passPattern.seekTimeRange.min} - ${passPattern.seekTimeRange.max} ms`);
+        lines.push(`- Key interval std deviation: ${passPattern.seekTimeStd} ms`);
+        lines.push(`- Long pauses (>500ms): ${passPattern.longPauses}`);
+        
+        // Show seekTime sequence
+        const passSeekTimes = passPattern.keystrokes.map(k => k.seekTime);
+        lines.push(`- Key interval sequence (ms): [${passSeekTimes.join(", ")}]`);
+        
+        if (passPattern.seekTimeStd < 20 && passPattern.keystrokeCount > 3) {
+          lines.push(`  ⚠️ Very uniform key intervals, possibly bot or script`);
+        }
+        if (passPattern.avgSeekTime < 30) {
+          lines.push(`  ⚠️ Extremely fast typing (avg interval <30ms), exceeds normal human speed`);
+        }
+      } else {
+        lines.push(`\n- Password: No typing data captured (possibly paste, autofill, or IME input)`);
+      }
+      
+      if (stats.typingdna.lastWarnings.length > 0) {
+        lines.push(`\nCapture warnings: ${stats.typingdna.lastWarnings.join(", ")}`);
+      }
+    } else {
+      lines.push(`- TypingDNA not ready, unable to analyze typing rhythm`);
+    }
+    lines.push("");
+    
+    // 7. Analysis Questions
+    lines.push("[Please Analyze the Following]");
+    lines.push("1. Based on the above features, does this login behavior appear to be human?");
+    lines.push("2. Are there any signs of automated scripts or bots?");
+    lines.push("3. How familiar does the user appear to be with their password?");
+    lines.push("4. Are there any abnormal behaviors requiring further verification?");
+    lines.push("5. Overall risk rating (Low/Medium/High) and reasoning.");
+    
+    return lines.join("\n");
+  }
+
+  /* ===================== IME detectors ===================== */
+  function bumpIME(field, via){
+    if (field === "username") imeUsernameCount++;
+    else imePasswordCount++;
+    logEvent("ime_detected", { field, via });
+    updateStatsUI();
+  }
+
+  function attachCompositionListeners(inputEl, field){
+    inputEl.addEventListener("compositionstart", (e) => {
+      bumpIME(field, "compositionstart");
+      const r = redactText(field, e.data);
+      logEvent("compositionstart", { field, data: r.preview });
+    });
+    inputEl.addEventListener("compositionupdate", (e) => {
+      const r = redactText(field, e.data);
+      logEvent("compositionupdate", { field, data: r.preview });
+    });
+    inputEl.addEventListener("compositionend", (e) => {
+      const r = redactText(field, e.data);
+      logEvent("compositionend", { field, data: r.preview });
+    });
+  }
+
+  function markIMEFromKeydown(field, e){
+    const maybeIME = (e.isComposing === true) || (e.keyCode === 229);
+    if (maybeIME){
+      logEvent("ime_hint", { field, via: "keydown", isComposing: !!e.isComposing, keyCode: e.keyCode });
+    }
+  }
+
+  /* ===================== TypingDNA loader + init ===================== */
+  const TYPINGDNA_URLS = [
+    "https://cdn.typingdna.com/typingdna.js",
+    "https://www.typingdna.com/scripts/typingdna.js",
+    "https://api.typingdna.com/scripts/typingdna.js"
+  ];
+
+  function loadScript(src){
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve(src);
+      s.onerror = () => reject(new Error("Failed to load " + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureTypingDNALoaded(){
+    if (typeof window.TypingDNA !== "undefined") {
+      tdnaLibraryLoaded = true;
+      return { ok:true, url:"(already present)" };
+    }
+    for (const url of TYPINGDNA_URLS){
+      try{
+        const loadedUrl = await loadScript(url);
+        if (typeof window.TypingDNA !== "undefined"){
+          tdnaLibraryLoaded = true;
+          logEvent("typingdna_script_loaded", { url: loadedUrl });
+          return { ok:true, url: loadedUrl };
+        }
+      }catch(err){
+        logEvent("typingdna_script_failed", { url, error: String(err) });
+      }
+    }
+    tdnaLibraryLoaded = false;
+    return { ok:false, url:null };
+  }
+
+  function addTargetSafe(el){
+    if (!el) return false;
+    const tries = el.id ? [el.id, el] : [el];
+
+    for (const t of tries){
+      try{
+        if (tdna && typeof tdna.addTarget === "function"){
+          tdna.addTarget(t);
+          return true;
+        }
+      }catch(e){}
+      try{
+        if (typeof TypingDNA !== "undefined" && typeof TypingDNA.addTarget === "function"){
+          TypingDNA.addTarget(t);
+          return true;
+        }
+      }catch(e){}
+    }
+    return false;
+  }
+
+  function resetTdna(reason){
+    if (!tdnaReady || !tdna) return;
+
+    try{
+      if (typeof tdna.reset === "function") tdna.reset();
+      kdUserAtReset = usernameKeydownCount;
+      kdPassAtReset = passwordKeydownCount;
+      pasteUserAtReset = pasteUser;
+      pastePassAtReset = pastePass;
+      tdnaSessionStarted = true;
+      usernamePatternAtBlur = "";
+      passwordPatternAtBlur = "";
+      logEvent("typingdna_reset", { reason });
+    }catch(err){
+      logEvent("typingdna_error", { message: String(err) });
+    }
+    updateStatsUI();
+  }
+
+  function startTdnaSessionIfNeeded(trigger){
+    if (!tdnaReady || !tdna) return;
+    if (tdnaSessionStarted) return;
+    resetTdna("session_start:" + trigger);
+  }
+
+  function initTypingDNARecorder(){
+    try{
+      if (typeof window.TypingDNA === "undefined"){
+        tdnaReady = false;
+        setStatus("TypingDNA not available (script blocked or failed to load).", "bad");
+        logEvent("typingdna_error", { message: "TypingDNA global is undefined." });
+        updateStatsUI();
+        return;
+      }
+
+      tdna = new TypingDNA();
+
+      const ok1 = addTargetSafe(usernameField);
+      const ok2 = addTargetSafe(passwordField);
+
+      tdnaTargetsAdded = !!(ok1 && ok2);
+
+      if (typeof tdna.start === "function") tdna.start();
+
+      tdnaReady = true;
+      setStatus("Ready. Type manually (no autofill/paste) for best results.", "ok");
+      logEvent("typingdna_ready", { targetsAdded: tdnaTargetsAdded });
+
+      resetTdna("init");
+
+    }catch(err){
+      tdnaReady = false;
+      setStatus("TypingDNA init error: " + safeText(err), "bad");
+      logEvent("typingdna_error", { message: String(err) });
+    }
+    updateStatsUI();
+  }
+
+  /* ===================== TypingDNA capture ===================== */
+  function captureTypingDNAPatterns(context){
+    lastTdnaWarnings = [];
+    lastTdnaUserTpLen = 0;
+    lastTdnaPassTpLen = 0;
+    lastTdnaComboTpLen = 0;
+    lastTdnaCapturedAtMs = nowMs();
+
+    if (!consentChk.checked){
+      lastTdnaWarnings.push("no_consent");
+      logEvent("typingdna_capture_skipped", { context, reason: "no_consent" });
+      setStatus("Consent is not checked — TypingDNA capture skipped.", "warn");
+      updateStatsUI();
+      return;
+    }
+
+    if (!tdnaReady || !tdna){
+      lastTdnaWarnings.push("recorder_not_ready");
+      logEvent("typingdna_capture_skipped", { context, reason: "recorder_not_ready" });
+      setStatus("TypingDNA recorder not ready (script blocked/failed).", "bad");
+      updateStatsUI();
+      return;
+    }
+
+    startTdnaSessionIfNeeded("capture");
+
+    const username = usernameField.value || "";
+    const password = passwordField.value || "";
+
+    const kdUserSinceReset = usernameKeydownCount - kdUserAtReset;
+    const kdPassSinceReset = passwordKeydownCount - kdPassAtReset;
+    const pasteUserSinceReset = pasteUser - pasteUserAtReset;
+    const pastePassSinceReset = pastePass - pastePassAtReset;
+
+    if (username.length > 0 && kdUserSinceReset === 0 && pasteUserSinceReset === 0){
+      lastTdnaWarnings.push("username_no_keystrokes (autofill?)");
+    }
+    if (password.length > 0 && kdPassSinceReset === 0 && pastePassSinceReset === 0){
+      lastTdnaWarnings.push("password_no_keystrokes (autofill?)");
+    }
+    if (pasteUserSinceReset > 0) lastTdnaWarnings.push("username_paste_detected");
+    if (pastePassSinceReset > 0) lastTdnaWarnings.push("password_paste_detected");
+
+    let tpUser = "";
+    let tpPass = "";
+    let tpCombo = "";
+
+    try{
+      if (username) {
+        tpUser = tdna.getTypingPattern({ type: 1, text: username, targetId: usernameField.id }) || "";
+        if (!tpUser) {
+          tpUser = tdna.getTypingPattern({ type: 1, text: username }) || "";
+        }
+        if (!tpUser && usernamePatternAtBlur) {
+          tpUser = usernamePatternAtBlur;
+        }
+        if (!tpUser) {
+          tpUser = tdna.getTypingPattern({ type: 0, targetId: usernameField.id }) || "";
+        }
+      }
+
+      if (password) {
+        tpPass = tdna.getTypingPattern({ type: 1, text: password, targetId: passwordField.id }) || "";
+        if (!tpPass) {
+          tpPass = tdna.getTypingPattern({ type: 1, text: password }) || "";
+        }
+        if (!tpPass && passwordPatternAtBlur) {
+          tpPass = passwordPatternAtBlur;
+        }
+        if (!tpPass) {
+          tpPass = tdna.getTypingPattern({ type: 0, targetId: passwordField.id }) || "";
+        }
+      }
+
+      if (username || password) {
+        tpCombo = tdna.getTypingPattern({ type: TDNA_COMBO_TYPE, text: username + password }) || "";
+        if (!tpCombo) {
+          tpCombo = tdna.getTypingPattern({ type: 0 }) || "";
+        }
+      }
+
+      lastTdnaUserTp = tpUser || "";
+      lastTdnaPassTp = tpPass || "";
+      lastTdnaComboTp = tpCombo || "";
+      
+      lastTdnaUserTpLen = lastTdnaUserTp.length;
+      lastTdnaPassTpLen = lastTdnaPassTp.length;
+      lastTdnaComboTpLen = lastTdnaComboTp.length;
+      
+      if (tpUser && tpPass && tpUser === tpPass) {
+        logEvent("tdna_warning", { message: "username and password patterns are identical" });
+      }
+
+      if (username.length && !tpUser) lastTdnaWarnings.push("username_tp_empty");
+      if (password.length && !tpPass) lastTdnaWarnings.push("password_tp_empty");
+      if ((username.length || password.length) && !tpCombo) lastTdnaWarnings.push("combo_tp_empty");
+
+      logEvent("typingdna_capture", {
+        context,
+        userType: TDNA_USER_TYPE,
+        passType: TDNA_PASS_TYPE,
+        comboType: TDNA_COMBO_TYPE,
+        usernameLen: username.length,
+        passwordLen: password.length,
+        usernameTpLen: lastTdnaUserTpLen,
+        passwordTpLen: lastTdnaPassTpLen,
+        comboTpLen: lastTdnaComboTpLen,
+        warnings: lastTdnaWarnings
+      });
+
+      setStatus(
+        (lastTdnaComboTpLen > 0 || lastTdnaUserTpLen > 0 || lastTdnaPassTpLen > 0)
+          ? "TypingDNA captured (see lengths in Statistics)."
+          : "TypingDNA captured, but pattern is empty — likely autofill/paste/no keystrokes.",
+        (lastTdnaComboTpLen > 0 || lastTdnaUserTpLen > 0 || lastTdnaPassTpLen > 0) ? "ok" : "warn"
+      );
+
+    }catch(err){
+      lastTdnaWarnings.push("capture_error");
+      logEvent("typingdna_error", { message: String(err) });
+      setStatus("TypingDNA capture error: " + safeText(err), "bad");
+    }
+
+    updateStatsUI();
+    resetTdna("after_capture:" + context);
+  }
+
+  /* ===================== Enter submit handler ===================== */
+  function handleEnterSubmit(fromField, e){
+    if (e.key !== "Enter") return;
+    
+    // 如果正在 IME 输入中（composition），不处理 Enter
+    // 这样可以避免 composition 文本被带到下一个字段
+    if (e.isComposing || e.keyCode === 229) {
+      return; // 让 IME 自己处理 Enter
+    }
+
+    if (fromField === "username"){
+      e.preventDefault();
+      logEvent("enter_in_username_focus_password", {});
+      try { passwordField.focus(); } catch {}
+      return;
+    }
+
+    const u = (usernameField.value || "").trim();
+    const p = (passwordField.value || "");
+
+    if (!u || !p){
+      e.preventDefault();
+      logEvent("enter_submit_blocked", {
+        fromField,
+        hasUsername: !!u,
+        hasPassword: !!p
+      });
+      return;
+    }
+
+    e.preventDefault();
+
+    if (tLoginActionMs == null) tLoginActionMs = nowMs();
+
+    logEvent("login_clicked", { via: "enter", fromField });
+
+    updateStatsUI();
+
+    if (typeof form.requestSubmit === "function"){
+      form.requestSubmit(loginButton);
+    } else {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    }
+  }
+
+  /* ===================== core listeners ===================== */
+  // username focus
+  usernameField.addEventListener("focus", () => {
+    if (tFocusUsernameMs == null) tFocusUsernameMs = nowMs();
+    logEvent("focus", { field:"username" });
+    startTdnaSessionIfNeeded("username_focus");
+    startTrajectory("username_focus");
+    updateStatsUI();
+  });
+  usernameField.addEventListener("blur", () => {
+    logEvent("blur", { field:"username" });
+    const username = usernameField.value || "";
+    if (username && consentChk.checked && tdnaReady && tdna) {
+      try {
+        usernamePatternAtBlur = tdna.getTypingPattern({ type: 1, text: username, targetId: usernameField.id }) || "";
+        if (!usernamePatternAtBlur) {
+          usernamePatternAtBlur = tdna.getTypingPattern({ type: 1, text: username }) || "";
+        }
+        if (usernamePatternAtBlur) {
+          lastTdnaUserTp = usernamePatternAtBlur;
+          lastTdnaUserTpLen = usernamePatternAtBlur.length;
+          logEvent("tdna_field_pattern_captured", { field: "username", patternLen: usernamePatternAtBlur.length });
+          updateStatsUI();
+        }
+      } catch(err) {
+        logEvent("tdna_field_pattern_error", { field: "username", error: String(err) });
+      }
+    }
   });
 
-  if (e.inputType === "insertCompositionText"){
-    bumpIME(field, "beforeinput.insertCompositionText");
-    updateStatsUIAndMaybeLog();
+  // password touched
+  function markPasswordTouched(trigger){
+    if (tPasswordTouchMs == null){
+      tPasswordTouchMs = nowMs();
+      logEvent("password_touched", { trigger });
+      stopTrajectory("password_touched:" + trigger);
+      updateStatsUI();
+    }
   }
-}
-usernameField.addEventListener("beforeinput", (e)=>onBeforeInput("username", e));
-passwordField.addEventListener("beforeinput", (e)=>onBeforeInput("password", e));
+  passwordField.addEventListener("pointerdown", () => markPasswordTouched("pointerdown"));
+  passwordField.addEventListener("mousedown",   () => markPasswordTouched("mousedown"));
+  passwordField.addEventListener("focus", () => {
+    markPasswordTouched("focus");
+    logEvent("focus", { field:"password" });
+    startTdnaSessionIfNeeded("password_focus");
+    updateStatsUI();
+  });
+  passwordField.addEventListener("blur", () => {
+    logEvent("blur", { field:"password" });
+    const password = passwordField.value || "";
+    if (password && consentChk.checked && tdnaReady && tdna) {
+      try {
+        passwordPatternAtBlur = tdna.getTypingPattern({ type: 1, text: password, targetId: passwordField.id }) || "";
+        if (!passwordPatternAtBlur) {
+          passwordPatternAtBlur = tdna.getTypingPattern({ type: 1, text: password }) || "";
+        }
+        if (passwordPatternAtBlur) {
+          lastTdnaPassTp = passwordPatternAtBlur;
+          lastTdnaPassTpLen = passwordPatternAtBlur.length;
+          logEvent("tdna_field_pattern_captured", { field: "password", patternLen: passwordPatternAtBlur.length });
+          updateStatsUI();
+        }
+      } catch(err) {
+        logEvent("tdna_field_pattern_error", { field: "password", error: String(err) });
+      }
+    }
+  });
 
-// input
-usernameField.addEventListener("input", (e)=>{
-  logEvent("input", { field:"username", inputType: e.inputType || null });
-});
-passwordField.addEventListener("input", (e)=>{
-  logEvent("input", { field:"password", inputType: e.inputType || null });
-});
+  // keydowns
+  usernameField.addEventListener("keydown", (e) => {
+    usernameKeydownCount++;
+    markIMEFromKeydown("username", e);
+    handleEnterSubmit("username", e);
+    logEvent("keydown", { field:"username", key:redactKey(e), code:redactCode(e.code), shift:!!e.shiftKey });
+    updateStatsUI();
+  });
 
-// composition listeners (real IME)
-attachCompositionListeners(usernameField, "username");
-attachCompositionListeners(passwordField, "password");
+  passwordField.addEventListener("keydown", (e) => {
+    passwordKeydownCount++;
+    markIMEFromKeydown("password", e);
+    handleEnterSubmit("password", e);
 
-// paste (count + classify eq2/gt2)
-function onPaste(field, e){
-  pasteCount++;
-  let pastedText = "";
-  try { pastedText = (e.clipboardData || window.clipboardData)?.getData("text") || ""; } catch {}
-  logEvent("paste", { field, pasted: safeText(pastedText, 200), pastedLen: pastedText.length });
-  updateStatsUIAndMaybeLog();
-}
-usernameField.addEventListener("paste", (e)=>onPaste("username", e));
-passwordField.addEventListener("paste", (e)=>onPaste("password", e));
+    if (e.key === "Shift") pwShiftCount++;
+    if (e.key === "CapsLock") pwCapsCount++;
 
-// login click timing
-loginButton.addEventListener("click", ()=>{
-  if (tLoginClickMs == null) tLoginClickMs = nowMs();
-  logEvent("login_clicked", {});
-  updateStatsUIAndMaybeLog();
-});
+    try{
+      const caps = !!(e.getModifierState && e.getModifierState("CapsLock"));
+      if (lastCapsState === null) lastCapsState = caps;
+      else if (caps !== lastCapsState){
+        pwCapsCount++;
+        lastCapsState = caps;
+        logEvent("capslock_state_change", { field:"password", caps });
+      }
+    }catch{}
 
-/* ===================== submit (always success) ===================== */
-form.addEventListener("submit", (e)=>{
-  e.preventDefault();
-  const username = usernameField.value || "";
-  const password = passwordField.value || "";
-  logEvent("submit", { username: safeText(username, 80), passwordLen: password.length });
+    logEvent("keydown", { field:"password", key:redactKey(e), code:redactCode(e.code), shift:!!e.shiftKey });
+    updateStatsUI();
+  });
 
-  // Always success
-  logEvent("login_success", { username: safeText(username, 80) });
-});
+  // beforeinput
+  function onBeforeInput(field, e){
+    const r = redactText(field, e.data);
+    logEvent("beforeinput", { field, inputType: e.inputType, data: r.preview });
+    if (e.inputType === "insertCompositionText"){
+      bumpIME(field, "beforeinput.insertCompositionText");
+    }
+  }
+  usernameField.addEventListener("beforeinput", (e) => onBeforeInput("username", e));
+  passwordField.addEventListener("beforeinput", (e) => onBeforeInput("password", e));
 
-/* ===================== export ===================== */
-downloadLogBtn.addEventListener("click", ()=>{
-  const payload = {
-    exportedAt: ts(),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    stats: snapshotStats(),
-    logs
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "login_stats_log_with_ime.json";
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
+  // input
+  usernameField.addEventListener("input", (e) => logEvent("input", { field:"username", inputType: e.inputType || null }));
+  passwordField.addEventListener("input", (e) => logEvent("input", { field:"password", inputType: e.inputType || null }));
 
-clearLogBtn.addEventListener("click", ()=>{
-  logEl.textContent = "";
-  logEvent("log_cleared", {});
-});
+  // composition listeners
+  attachCompositionListeners(usernameField, "username");
+  attachCompositionListeners(passwordField, "password");
 
-/* ===================== init ===================== */
-window.addEventListener("DOMContentLoaded", ()=>{
-  logEvent("init", {});
-  updateStatsUIAndMaybeLog();
-});
-</script>
+  // paste
+  function onPaste(field, e){
+    pasteTotal++;
+    if (field === "username") pasteUser++;
+    else pastePass++;
+
+    let pastedText = "";
+    try { pastedText = (e.clipboardData || window.clipboardData)?.getData("text") || ""; } catch {}
+    const r = redactText(field, pastedText);
+    logEvent("paste", { field, pasted: r.preview, pastedLen: (pastedText || "").length });
+    updateStatsUI();
+  }
+  usernameField.addEventListener("paste", (e) => onPaste("username", e));
+  passwordField.addEventListener("paste", (e) => onPaste("password", e));
+
+  // login action timing
+  loginButton.addEventListener("click", () => {
+    if (tLoginActionMs == null) tLoginActionMs = nowMs();
+    logEvent("login_clicked", {});
+    updateStatsUI();
+  });
+
+  // submit
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    if (tLoginActionMs == null) tLoginActionMs = nowMs();
+
+    const username = usernameField.value || "";
+    const password = passwordField.value || "";
+
+    logEvent("submit", { usernameLen: username.length, passwordLen: password.length });
+
+    captureTypingDNAPatterns("submit");
+
+    logEvent("login_success", { usernameLen: username.length });
+    updateStatsUI();
+  });
+
+  /* ===================== buttons ===================== */
+  captureBtn.addEventListener("click", () => captureTypingDNAPatterns("manual"));
+
+  resetTdnaBtn.addEventListener("click", () => {
+    resetTdna("manual_button");
+    setStatus("TypingDNA history reset.", "ok");
+  });
+
+  clearFormBtn.addEventListener("click", () => {
+    usernameField.value = "";
+    passwordField.value = "";
+    logEvent("form_cleared", {});
+    setStatus("Fields cleared.", "ok");
+    updateStatsUI();
+  });
+
+  downloadLogBtn.addEventListener("click", () => {
+    const payload = {
+      exportedAt: ts(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      stats: snapshotStats(),
+      logs
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "login_stats_combined.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  clearLogBtn.addEventListener("click", () => {
+    logEl.textContent = "";
+    logs.length = 0;
+    logEvent("log_cleared", {});
+    setStatus("Log cleared.", "ok");
+    updateStatsUI();
+  });
+
+  generateNLBtn.addEventListener("click", () => {
+    const prompt = generateNaturalLanguagePrompt();
+    nlOutput.textContent = prompt;
+    nlPanel.style.display = "block";
+    logEvent("nl_prompt_generated", { promptLength: prompt.length, lang: "zh" });
+  });
+
+  generateNLEnBtn.addEventListener("click", () => {
+    const prompt = generateNaturalLanguagePromptEN();
+    nlOutput.textContent = prompt;
+    nlPanel.style.display = "block";
+    logEvent("nl_prompt_generated", { promptLength: prompt.length, lang: "en" });
+  });
+
+  copyNLBtn.addEventListener("click", () => {
+    const text = nlOutput.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      copyNLBtn.textContent = "Copied!";
+      setTimeout(() => { copyNLBtn.textContent = "Copy"; }, 1500);
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      copyNLBtn.textContent = "Copied!";
+      setTimeout(() => { copyNLBtn.textContent = "Copy"; }, 1500);
+    });
+  });
+
+  /* ===================== init ===================== */
+  document.addEventListener("DOMContentLoaded", async () => {
+    logEvent("init", {});
+    setStatus("Loading TypingDNA library…", "warn");
+    updateStatsUI();
+
+    const res = await ensureTypingDNALoaded();
+    tdnaLibraryLoaded = !!res.ok;
+    updateStatsUI();
+
+    if (!res.ok){
+      setStatus("TypingDNA script failed to load (blocked by network/adblock/CSP).", "bad");
+      logEvent("typingdna_error", { message: "All script URLs failed.", tried: TYPINGDNA_URLS });
+      return;
+    }
+
+    initTypingDNARecorder();
+  });
+
+})();
+  </script>
 </body>
 </html>
